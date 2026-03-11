@@ -1,8 +1,24 @@
 @import "tailwindcss";
 
 @theme {  
-  --color-background_1: #0A2342; 
+  --color-background-1: #0A2342; 
   --background-image-banner: linear-gradient(to bottom, #1E3A8A 0%, #0D47A1 100%);
   --color-background_button: #F59E0B;
   --color-text_button: #1E293B;
+  --color-text-1: #F8FAFC;
+}
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    /* Isso garante que o body não tenha espaços internos/externos */
+  }
+
+  /* Opcional: Garante que o container principal não tenha restrições */
+  main {
+    margin: 0;
+    padding: 0;
+  }
 }
