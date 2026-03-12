@@ -1,3 +1,4 @@
+import { CarrosselDestaques } from "./components/CarrosselDestaques";
 import IconHeader from "./components/IconHeader";
 import { SearchBar } from "./components/SearchBar";
 
@@ -36,9 +37,12 @@ export default function Home() {
           <p className="text-center text-text-1 text-sm pb-5">Shows, festas, bares, teatros e workshops. Sua próxima experiência inesquecível começa aqui.</p>
           <div className="flex justify-center">
             <SearchBar />
-          </div>
-          
+          </div>          
         </div>  
+      </section>
+
+      <section>
+        <CarrosselDestaques />
       </section>
 
       <section className="px-8 pb-8">
