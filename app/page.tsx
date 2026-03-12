@@ -2,7 +2,7 @@ import IconHeader from "./components/IconHeader";
 import { SearchBar } from "./components/SearchBar";
 
 export default function Home() {
-  // 1. Nossos dados falsos (Mock)
+  //dados teste
   const eventos = [
     {
       id: 1,
@@ -22,18 +22,18 @@ export default function Home() {
 
   return (
     // Usando a sua cor de fundo principal: bg-background-1
-    <main className="min-h-screen bg-white text-black">
+    <main className="min-h-screen bg-white text-black font-family">
       
       {/* Usando o seu gradiente: bg-banner */}
-      <header className="bg-background-1 p-4 flex items-center justify-start px-8">
-        <span className="text-text-1 mr-2"><IconHeader /></span>        
+      <header className="bg-background-1 p-3 flex items-center justify-start px-4">
+        <span className="text-text-1 mr-2.5"><IconHeader /></span>        
         <p className="text-text-1 font-bold text-lg">FrancaEventos</p>
       </header>
 
-      <section className="bg-banner p-4 flex items-center justify-center">
+      <section className="bg-banner p-7 flex items-center justify-center">
         <div>
-          <h1 className="text-2xl text-text-1 font-bold text-center">Descubra o que acontece na cidade</h1>
-          <p className="text-center text-text-1">Shows, festas, bares, teatros e workshops. Sua próxima experiência inesquecível começa aqui.</p>
+          <h1 className="text-4xl text-text-1 font-bold text-center pb-3">Descubra o que acontece na cidade</h1>
+          <p className="text-center text-text-1 text-sm pb-5">Shows, festas, bares, teatros e workshops. Sua próxima experiência inesquecível começa aqui.</p>
           <div className="flex justify-center">
             <SearchBar />
           </div>
