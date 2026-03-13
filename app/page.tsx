@@ -1,4 +1,6 @@
+import { CardEvento } from "./components/CardEvento";
 import { CarrosselDestaques } from "./components/CarrosselDestaques";
+import { GradeEventos } from "./components/GradeEventos";
 import IconHeader from "./components/IconHeader";
 import { SearchBar } from "./components/SearchBar";
 
@@ -41,31 +43,12 @@ export default function Home() {
         </div>  
       </section>
 
-      <section>
+      <section className="px-8">
         <CarrosselDestaques />
       </section>
 
-      <section className="px-8 pb-8">
-        <h2 className="text-2xl font-semibold mb-6">Próximos Eventos</h2>
-        
-        {/* Grid para listar os eventos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {eventos.map((evento) => (
-            <div key={evento.id} className="bg-white/10 p-6 rounded-lg border border-white/20">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-300 mb-2 block">
-                {evento.categoria}
-              </span>
-              <h3 className="text-xl font-bold mb-2">{evento.titulo}</h3>
-              <p className="text-sm text-gray-300 mb-1">📅 {evento.data}</p>
-              <p className="text-sm text-gray-300 mb-6">📍 {evento.local}</p>
-              
-              {/* Usando as cores do seu botão */}
-              <button className="w-full bg-background-button text-text-button font-bold py-3 rounded-md hover:opacity-90 transition-opacity">
-                Ver Detalhes
-              </button>
-            </div>
-          ))}
-        </div>
+      <section className="px-8 pb-8">                
+        <GradeEventos />
       </section>
 
     </main>

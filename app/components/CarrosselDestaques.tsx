@@ -1,49 +1,11 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { eventosDestaque } from "../data/eventosTeste";
 
 export function CarrosselDestaques() {
   const carrosselRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  // dados teste 
-  const destaques = [
-    {
-      id: 1,
-      titulo: "Show de Pop",
-      imagem: "/imagens_teste/image1.png",
-      data: "20 a 31 de Maio",
-      categoria: "Show"
-    },
-    {
-      id: 2,
-      titulo: "Show de Rock",
-      imagem: "/imagens_teste/image2.png", 
-      data: "Em breve",
-      categoria: "Show"
-    },
-    {
-      id: 3,
-      titulo: "Teatro de Comédia",
-      imagem: "/imagens_teste/image3.png", 
-      data: "10 de Outubro",
-      categoria: "Teatro"
-    },
-    {
-      id: 4,
-      titulo: "Encontro de Carros Antigos",
-      imagem: "https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=1000&auto=format&fit=crop", 
-      data: "15 de Novembro",
-      categoria: "Exposição"
-    },    
-    {
-      id: 5,
-      titulo: "Feira de Artesanato Local",
-      imagem: "https://images.unsplash.com/photo-1452860606245-08befc0ff44b?q=80&w=1000&auto=format&fit=crop", 
-      data: "Todos os finais de semana",
-      categoria: "Cultura"
-    }
-  ];
+  const [activeIndex, setActiveIndex] = useState(0);  
 
   const scrollToNext = () => {
     if (!carrosselRef.current) return;
@@ -150,7 +112,7 @@ export function CarrosselDestaques() {
           onScroll={handleScroll}
           className="flex overflow-x-auto snap-x snap-mandatory gap-6 px-4 md:px-8 py-8 no-scrollbar scroll-smooth items-center"
         >
-          {destaques.map((evento, index) => {
+          {eventosDestaque.map((evento, index) => {
             const isActive = activeIndex === index;
             
             return (
