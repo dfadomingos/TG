@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { eventosDestaque } from "../data/eventosTeste";
+import IconLocal from "./IconLocal";
 
 export function CarrosselDestaques() {
   const carrosselRef = useRef<HTMLDivElement>(null);
@@ -140,7 +141,7 @@ export function CarrosselDestaques() {
                   </span>
                   <h3 className={`text-2xl font-bold mb-1 transition-colors ${isActive ? 'text-white' : 'text-gray-300'}`}>{evento.titulo}</h3>
                   <p className={`text-sm flex items-center gap-2 transition-colors ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
-                    📅 {evento.data}
+                    <IconLocal /> {evento.data}
                   </p>
                 </div>
               </div>

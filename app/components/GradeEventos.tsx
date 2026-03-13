@@ -19,6 +19,7 @@ export function GradeEventos() {
             data={evento.data}
             local={evento.local}
             imagem={evento.imagem}
+            hora={evento.hora}
             preco={evento.preco}
           />
         ))}
