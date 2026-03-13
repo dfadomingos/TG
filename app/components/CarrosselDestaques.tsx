@@ -94,7 +94,7 @@ export function CarrosselDestaques() {
   }, [activeIndex]);
 
   return (
-    <section className="w-full my-6 overflow-hidden">      
+    <section className="w-full mb-6 overflow-hidden">      
       <div className="relative group/carrossel">
         
         {/* botão de rolar para a esquerda */}

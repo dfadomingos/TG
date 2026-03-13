@@ -1,5 +1,5 @@
-import { CardEvento } from "./components/CardEvento";
 import { CarrosselDestaques } from "./components/CarrosselDestaques";
+import { FiltroCategorias } from "./components/FiltroCategorias";
 import { GradeEventos } from "./components/GradeEventos";
 import IconHeader from "./components/IconHeader";
 import { SearchBar } from "./components/SearchBar";
@@ -23,11 +23,10 @@ export default function Home() {
     }
   ];
 
-  return (
-    // Usando a sua cor de fundo principal: bg-background-1
+  return (    
     <main className="min-h-screen bg-white text-black font-family">
       
-      {/* Usando o seu gradiente: bg-banner */}
+      {/* usando o seu gradiente: bg-banner */}
       <header className="bg-background-1 p-3 flex items-center justify-start px-4">
         <span className="text-text-1 mr-2.5"><IconHeader /></span>        
         <p className="text-text-1 font-bold text-lg">FrancaEventos</p>
@@ -41,6 +40,10 @@ export default function Home() {
             <SearchBar />
           </div>          
         </div>  
+      </section>
+
+      <section>
+        <FiltroCategorias />
       </section>
 
       <section className="px-8">
