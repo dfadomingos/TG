@@ -2,6 +2,7 @@ import { CarrosselDestaques } from "./components/CarrosselDestaques";
 import { FiltroCategorias } from "./components/FiltroCategorias";
 import { GradeEventos } from "./components/GradeEventos";
 import IconHeader from "./components/IconHeader";
+import IconMegafone from "./components/IconMegafone";
 import { SearchBar } from "./components/SearchBar";
 
 export default function Home() {
@@ -52,6 +53,19 @@ export default function Home() {
 
       <section className="px-8 pb-8">                
         <GradeEventos />
+      </section>
+
+      <section className="bg-[#1E3A8A] py-6 px-4 md:px-8 shadow-inner">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">   
+          <div className="flex flex-col text-left text-white font-bold text-sm md:text-[1rem] leading-snug">
+            <p>Organiza eventos em Franca? Simplifique sua divulgação, pare de espalhar informações em dezenas de grupos.</p>
+            <p>Publique uma vez na Franca Eventos e seja encontrado por quem procura cultura e lazer na cidade.</p>
+          </div>          
+          <button className="bg-background-button text-text-button font-bold py-3 px-8 rounded-full flex items-center gap-3 hover:scale-105 transition-all shadow-lg whitespace-nowrap group">            
+            <IconMegafone />            
+            <span className="text-sm md:text-base">Quero Divulgar</span>
+          </button>          
+        </div>
       </section>
 
     </main>
