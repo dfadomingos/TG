@@ -15,6 +15,7 @@ export function GradeEventos() {
         {todosEventos.map((evento) => (
           <CardEvento 
             key={evento.id}
+            id={evento.id}
             titulo={evento.titulo}
             data={evento.data}
             local={evento.local}

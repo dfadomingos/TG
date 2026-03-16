@@ -1,7 +1,8 @@
 import { CarrosselDestaques } from "./components/CarrosselDestaques";
 import { FiltroCategorias } from "./components/FiltroCategorias";
 import { GradeEventos } from "./components/GradeEventos";
-import IconHeader from "./components/IconHeader";
+import { Header } from "./components/Header";
+import { Footer } from "./components/Footer";
 import IconMegafone from "./components/IconMegafone";
 import { SearchBar } from "./components/SearchBar";
 
@@ -27,11 +28,7 @@ export default function Home() {
   return (    
     <main className="min-h-screen bg-white text-black font-family">
       
-      {/* usando o seu gradiente: bg-banner */}
-      <header className="bg-background-1 p-3 flex items-center justify-start px-4">
-        <span className="text-text-1 mr-2.5"><IconHeader /></span>        
-        <p className="text-text-1 font-bold text-lg">FrancaEventos</p>
-      </header>
+      <Header />
 
       <section className="bg-banner p-7 flex items-center justify-center">
         <div>
@@ -68,11 +65,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="bg-background-1 flex items-center justify-center">
-        <header className="px-4 py-4">                 
-          <p className="text-text-1 font-regular text-xs">© 2026 FrancaEventos. Todos os direitos reservados.</p>
-        </header>
-      </footer>
+      <Footer />
 
     </main>
   );

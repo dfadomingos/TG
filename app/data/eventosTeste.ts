@@ -71,7 +71,7 @@ export const todosEventos = [
   },
   {
     id: 4,
-    titulo: "Encontro de Carros Antigos",
+    titulo: "Encontro de Carros",
     imagem: "https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=1000&auto=format&fit=crop", 
     data: "15 de Novembro",
     hora: "19:00",
