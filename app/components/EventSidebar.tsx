@@ -1,0 +1,61 @@
+import React from "react";
+import IconHora from "./IconHora";
+import IconPriceTag from "./IconPriceTag";
+import IconHeart from "./IconHeart";
+import IconShare from "./IconShare";
+import { Button } from "./Button";
+
+interface EventSidebarProps {
+  hora: string;
+  preco: string;
+}
+
+export function EventSidebar({ hora, preco }: EventSidebarProps) {
+  return (
+    <aside className="w-full lg:w-[480px] lg:shrink-0 px-4 md:px-14 lg:px-8 py-8 lg:py-12 bg-transparent">
+      <div className="w-full rounded-2xl px-6 md:px-8 py-6 bg-[#D2D1D1]">
+        {/* Cabeçalho "Detalhes" */}
+        <h3 className="font-bold mb-4 text-2xl lg:text-[25px] text-black">
+          Detalhes
+        </h3>
+        <hr className="border-black mb-6" />
+
+        {/* Horário */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <IconHora />
+            <span className="font-bold text-base text-black">Horário</span>
+          </div>
+          <p className="text-base font-light text-black pl-8">{hora}</p>
+        </div>
+
+        {/* Preço */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <IconPriceTag fill="#000000" />
+            <span className="font-bold text-base text-black">Preço</span>
+          </div>
+          <p className="text-base font-light text-black pl-8">{preco}</p>
+        </div>
+
+        {/* Botão: Comprar Ingresso */}
+        <Button variant="accent" fullWidth className="h-[52px] text-lg mb-6 shadow-md">
+          🎟 Comprar Ingresso
+        </Button>
+
+        {/* Botões: Favoritar + Compartilhar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+          <Button variant="primary" fullWidth className="h-[44px]">
+            <IconHeart />
+            <span>Favoritar</span>
+          </Button>
+
+          <Button variant="primary" fullWidth className="h-[44px]">
+            <IconShare fill="#F8FAFC" />
+            <span>Compartilhar</span>
+          </Button>
+        </div>
+      </div>
+    </aside>
+  );
+}
