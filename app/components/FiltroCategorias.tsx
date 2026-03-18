@@ -18,7 +18,7 @@ export function FiltroCategorias() {
   const [categoriaAtiva, setCategoriaAtiva] = useState("Todos");
 
   return (
-    <div className="flex flex-wrap gap-1 my-3 px-8">
+    <div className="flex flex-wrap gap-2 my-2 px-4 sm:px-8">
       {categorias.map((categoria) => {
         // lógica de cor: verificamos se esta categoria é a que está ativa
         const isActive = categoriaAtiva === categoria;

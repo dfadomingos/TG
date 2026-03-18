@@ -95,7 +95,7 @@ export function CarrosselDestaques() {
   }, [activeIndex]);
 
   return (
-    <section className="w-full mb-6 overflow-hidden">      
+    <section className="w-full overflow-hidden">      
       <div className="relative group/carrossel">
         
         {/* botão de rolar para a esquerda */}
@@ -132,7 +132,7 @@ export function CarrosselDestaques() {
                 />
                 
                 {/* camada escura por cima da imagem */}
-                <div className={`absolute inset-0 transition-colors duration-500 ${isActive ? 'bg-gradient-to-t from-black/90 via-black/30 to-transparent' : 'bg-black/50'}`}></div>
+                <div className={`absolute inset-0 transition-colors duration-500 ${isActive ? 'bg-linear-to-t from-black/90 via-black/30 to-transparent' : 'bg-black/50'}`}></div>
 
                 {/* conteúdo do card */}
                 <div className={`absolute bottom-0 left-0 p-6 transition-transform duration-500 ${isActive ? 'translate-y-0' : 'translate-y-2'}`}>
