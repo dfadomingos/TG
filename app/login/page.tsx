@@ -1,7 +1,7 @@
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { LoginHero } from "./components/LoginHero";
-import { LoginCTA } from "./components/LoginCTA";
+import { HomeCTA } from "../components/HomeCTA";
 
 export const metadata = {
   title: "Login | FrancaEventos",
@@ -13,7 +13,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-[#0D47A1] font-(--font-family) selection:bg-blue-100 flex flex-col">
       <Header />
       <LoginHero />
-      <LoginCTA />
+      <HomeCTA />
       <Footer />
     </main>
   );

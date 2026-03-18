@@ -2,12 +2,12 @@ import IconMegafone from "./IconMegafone";
 
 export function HomeCTA() {
   return (
-    <section className="bg-[#1E3A8A] py-6 md:py-10 px-6 lg:px-12 shadow-inner overflow-hidden relative border-t border-white/10">
-      <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 relative z-10">
+    <section className="bg-[#1E3A8A] py-4 md:py-6 px-4 sm:px-6 lg:px-8 shadow-inner overflow-hidden relative border-t border-white/10">
+      <div className="w-full flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8 relative z-10">
         
         <div className="flex flex-col text-left text-white max-w-2xl">
           <h3 className="text-lg md:text-xl lg:text-2xl font-extrabold mb-2 tracking-tight leading-tight text-center md:text-left">
-            Organiza eventos em Franca? <br className="hidden lg:block"/>
+            Organiza eventos em Franca? <br className="lg:hidden"/>
             Simplifique sua divulgação.
           </h3>
           <p className="text-xs sm:text-sm md:text-base lg:text-lg font-medium opacity-80 leading-relaxed text-center md:text-left">
