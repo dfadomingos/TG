@@ -37,7 +37,7 @@ export function CardEvento({ id, titulo, data, local, imagem, hora, preco }: Pro
 
       {/* área de informações */}
       <div className="p-3 flex flex-col flex-1">
-        <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{titulo}</h3>
+        <h3 className="text-[1.45rem] font-extrabold text-gray-900 mb-2 line-clamp-2">{titulo}</h3>
         <div className="text-sm text-gray-600 mb-4 flex-1 space-y-1">
           <p className="flex items-center gap-1.5"><IconLocal /> {local}</p>
           <p className="flex items-center gap-1.5"><IconHora /> {hora}</p>
