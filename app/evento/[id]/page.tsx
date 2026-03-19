@@ -55,7 +55,7 @@ export default async function EventoPage({ params }: any) {
         />
 
         {/* Dynamic Content Grid */}
-        <div className="max-w-[1200px] mx-auto flex flex-col lg:flex-row">
+        <div className="max-w-[1500px] mx-auto flex flex-col lg:flex-row">
           
           {/* Main Content Area */}
           <section className="flex-1 px-4 sm:px-8 md:px-14 py-8 lg:py-12">
