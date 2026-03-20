@@ -19,50 +19,55 @@ export default function CadastroPage() {
       
       <main className="flex-grow relative flex flex-col">
         {/* Background Layer */}
-        <div className="absolute inset-0 z-0 bg-gray-900 overflow-hidden">
+        <div className="absolute inset-0 z-0 overflow-hidden">
           <img 
-            src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
+            src="/imagens_teste/1773781867148_2.png" 
             alt="Eventos Background" 
-            className="w-full h-full object-cover opacity-20 mix-blend-overlay"
+            className="w-full h-full object-contain object-top"
+          />
+          {/* Gradient overlay: white from bottom to transparent at top */}
+          <div 
+            className="absolute inset-0"
+            style={{ background: 'linear-gradient(to top, #FFFFFF 0%, #FFFFFF 20%, rgba(255,255,255,0.85) 40%, rgba(255,255,255,0.4) 70%, rgba(255,255,255,0) 100%)' }}
           />
         </div>
 
         {/* Content Layer */}
-        <div className="relative z-10 flex-grow flex flex-col items-center py-6 px-4 md:px-8">
+        <div className="relative z-10 flex-grow flex flex-col items-center py-3 px-4 md:px-8">
           
           {/* Back Button */}
-          <div className="w-full max-w-6xl mb-6">
-            <Link href="/" className="inline-flex items-center gap-2 bg-[#0A2342] text-white px-5 py-2.5 rounded-full font-bold hover:bg-opacity-90 transition-all shadow-md">
+          <div className="w-full max-w-[640px] mb-2">
+            <Link href="/" className="inline-flex items-center gap-1.5 bg-[#0A2342] text-white px-4 py-1.5 rounded-full text-sm font-bold hover:bg-opacity-90 transition-all shadow-md">
               <IconBack className="w-5 h-5" fill="currentColor" />
               <span>Voltar</span>
             </Link>
           </div>
 
           {/* Form Card */}
-          <div className="w-full max-w-[1084px] bg-white rounded-[20px] shadow-2xl border border-gray-300 overflow-hidden flex flex-col mb-12">
+          <div className="w-full max-w-[640px] bg-white rounded-[16px] shadow-2xl border border-gray-300 overflow-hidden flex flex-col mb-4">
             
             {/* Tabs */}
-            <div className="flex w-full h-20 md:h-[109px]">
+            <div className="flex w-full h-11 md:h-[50px]">
               <div className="flex-1 bg-white flex items-center justify-center border-b-4 border-[#0A2342]">
                 <div className="flex items-center gap-3">
-                  <span className="text-[#1E293B] font-bold text-xl md:text-3xl">Para Usuários</span>
-                  <IconUser className="w-6 h-6 md:w-10 md:h-10 hidden sm:block" fill="#1E293B" />
+                  <span className="text-[#1E293B] font-bold text-base md:text-xl">Para Usuários</span>
+                  <IconUser className="w-4 h-4 md:w-6 md:h-6 hidden sm:block" fill="#1E293B" />
                 </div>
               </div>
               <div className="flex-1 bg-[#D9D9D9] flex items-center justify-center opacity-70 cursor-not-allowed">
                 <div className="flex items-center gap-3">
-                  <span className="text-[#1E293B] font-bold text-xl md:text-3xl line-clamp-1">Para Organizadores</span>
-                  <IconUser className="w-6 h-6 md:w-10 md:h-10 hidden sm:block" fill="#1E293B" />
+                  <span className="text-[#1E293B] font-bold text-base md:text-xl line-clamp-1">Para Organizadores</span>
+                  <IconUser className="w-4 h-4 md:w-6 md:h-6 hidden sm:block" fill="#1E293B" />
                 </div>
               </div>
             </div>
 
             {/* Form Content */}
-            <div className="flex flex-col items-center px-4 py-8 md:px-24 md:py-12">
-              <h1 className="text-[#1E293B] font-bold text-3xl md:text-5xl mb-2 text-center">Crie sua conta</h1>
-              <p className="text-[#1E293B] font-light text-lg md:text-[25px] mb-8 md:mb-12 text-center">Favorite seus eventos</p>
+            <div className="flex flex-col items-center px-4 py-3 md:px-12 md:py-5">
+              <h1 className="text-[#1E293B] font-bold text-xl md:text-3xl mb-0.5 text-center">Crie sua conta</h1>
+              <p className="text-[#1E293B] font-light text-sm md:text-lg mb-3 md:mb-4 text-center">Favorite seus eventos</p>
 
-              <form className="w-full max-w-[893px] flex flex-col gap-6 md:gap-8">
+              <form className="w-full max-w-[520px] flex flex-col gap-2.5 md:gap-3">
                 <Input 
                   label="Nome Completo" 
                   placeholder="Seu nome" 
@@ -83,7 +88,7 @@ export default function CadastroPage() {
                   icon={<IconPhone className="w-full h-full" fill="#000000" />} 
                 />
 
-                <div className="flex flex-col md:flex-row gap-6 md:gap-8 w-full">
+                <div className="flex flex-col md:flex-row gap-2.5 md:gap-3 w-full">
                   <div className="flex-1">
                     <Input 
                       label="Senha" 
@@ -103,7 +108,7 @@ export default function CadastroPage() {
                 </div>
 
                 {/* Checkboxes */}
-                <div className="flex flex-col gap-4 mt-2 md:mt-4 pt-6 md:pt-8 border-t border-black/30">
+                <div className="flex flex-col gap-2 mt-1 pt-3 md:pt-3 border-t border-black/30">
                   <Checkbox 
                     label="Li e aceito os Termos de Uso e a Política de Privacidade (obrigatório)" 
                     required 
@@ -114,11 +119,11 @@ export default function CadastroPage() {
                 </div>
 
                 {/* Submit Action */}
-                <div className="mt-6 md:mt-8 mb-4">
-                  <Button variant="accent" fullWidth className="h-14 md:h-[63px] text-xl md:text-2xl shadow-lg">
+                <div className="mt-3 mb-1">
+                  <Button variant="accent" fullWidth className="h-10 md:h-[44px] text-base md:text-lg shadow-lg">
                     <div className="flex items-center justify-center gap-4 w-full h-full">
                       <span>Cadastrar</span>
-                      <svg width="32" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg width="24" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                         <path d="M12 5L19 12L12 19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
@@ -127,9 +132,9 @@ export default function CadastroPage() {
                 </div>
 
                 {/* Login Link */}
-                <div className="text-center rounded-b-[20px] bg-white pb-4">
-                  <span className="text-[#1E293B] text-lg md:text-[25px] font-light">Já tem uma conta? </span>
-                  <Link href="/login" className="text-[#F59E0B] text-lg md:text-[25px] font-medium hover:underline ml-2">
+                <div className="text-center rounded-b-[16px] bg-white pb-1">
+                  <span className="text-[#1E293B] text-sm md:text-base font-light">Já tem uma conta? </span>
+                  <Link href="/login" className="text-[#F59E0B] text-sm md:text-base font-medium hover:underline ml-1">
                     Faça Login
                   </Link>
                 </div>
