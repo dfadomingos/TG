@@ -76,7 +76,7 @@ export function LoginCard() {
             Não tem uma conta?
           </span>
           <Link
-            href="#"
+            href="/cadastro"
             className="text-background-button font-semibold text-xs sm:text-sm md:text-base lg:text-xl hover:underline transition-all"
           >
             Cadastra-se aqui.

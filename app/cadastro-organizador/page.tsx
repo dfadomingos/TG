@@ -12,7 +12,9 @@ import IconLock from '../components/IconLock';
 import IconPhone from '../components/IconPhone';
 import IconBack from '../components/IconBack';
 import IconOrganizer from '../components/IconOrganizer';
-export default function CadastroPage() {
+import IconShare from '../components/IconShare';
+
+export default function CadastroOrganizadorPage() {
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F8FAFC]">
       <Header />
@@ -48,24 +50,24 @@ export default function CadastroPage() {
             
             {/* Tabs */}
             <div className="flex w-full h-11 md:h-[50px]">
-              <div className="flex-1 bg-white flex items-center justify-center border-b-4 border-[#0A2342]">
+              <Link href="/cadastro" className="flex-1 bg-[#D9D9D9] flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity cursor-pointer text-decoration-none">
                 <div className="flex items-center gap-3">
                   <span className="text-[#1E293B] font-bold text-base md:text-xl">Para Usuários</span>
                   <IconUser className="w-4 h-4 md:w-6 md:h-6 hidden sm:block" fill="#1E293B" />
                 </div>
-              </div>
-              <Link href="/cadastro-organizador" className="flex-1 bg-[#D9D9D9] flex items-center justify-center opacity-70 hover:opacity-100 transition-opacity cursor-pointer text-decoration-none">
+              </Link>
+              <div className="flex-1 bg-white flex items-center justify-center border-b-4 border-[#0A2342]">
                 <div className="flex items-center gap-3">
                   <span className="text-[#1E293B] font-bold text-base md:text-xl line-clamp-1">Para Organizadores</span>
                   <IconOrganizer className="w-4 h-4 md:w-6 md:h-6 hidden sm:block" fill="#1E293B" />
                 </div>
-              </Link>
+              </div>
             </div>
 
             {/* Form Content */}
             <div className="flex flex-col items-center px-4 py-3 md:px-12 md:py-5">
               <h1 className="text-[#1E293B] font-bold text-xl md:text-3xl mb-0.5 text-center">Crie sua conta</h1>
-              <p className="text-[#1E293B] font-light text-sm md:text-lg mb-3 md:mb-4 text-center">Favorite seus eventos</p>
+              <p className="text-[#1E293B] font-light text-sm md:text-lg mb-3 md:mb-4 text-center">Divulgue seus eventos</p>
 
               <form className="w-full max-w-[520px] flex flex-col gap-2.5 md:gap-3">
                 <Input 
@@ -74,18 +76,47 @@ export default function CadastroPage() {
                   icon={<IconUser className="w-full h-full" fill="#000000" />} 
                 />
                 
+                <div className="flex flex-col md:flex-row gap-2.5 md:gap-3 w-full">
+                  <div className="flex-1">
+                    <Input 
+                      label="Nome Produtora" 
+                      placeholder="Nome produtora" 
+                      icon={<IconOrganizer className="w-full h-full" fill="#000000" />} 
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input 
+                      label="CNPJ" 
+                      placeholder="00.000.000/0000-00" 
+                      icon={<IconOrganizer className="w-full h-full" fill="#000000" />} 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-2.5 md:gap-3 w-full">
+                  <div className="flex-1">
+                    <Input 
+                      label="Email" 
+                      type="email"
+                      placeholder="seu@email.com" 
+                      icon={<IconEmail className="w-full h-full" fill="#000000" />} 
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input 
+                      label="Celular" 
+                      type="tel"
+                      placeholder="(00)00000-0000" 
+                      icon={<IconPhone className="w-full h-full" fill="#000000" />} 
+                    />
+                  </div>
+                </div>
+
                 <Input 
-                  label="Email" 
-                  type="email"
-                  placeholder="seu@email.com" 
-                  icon={<IconEmail className="w-full h-full" fill="#000000" />} 
-                />
-                
-                <Input 
-                  label="Celular" 
-                  type="tel"
-                  placeholder="(00)00000-0000" 
-                  icon={<IconPhone className="w-full h-full" fill="#000000" />} 
+                  label="Link Rede Social / Site" 
+                  type="url"
+                  placeholder="https://..." 
+                  icon={<IconShare className="w-full h-full" fill="#000000" />} 
                 />
 
                 <div className="flex flex-col md:flex-row gap-2.5 md:gap-3 w-full">
@@ -110,11 +141,8 @@ export default function CadastroPage() {
                 {/* Checkboxes */}
                 <div className="flex flex-col gap-2 mt-1 pt-3 md:pt-3 border-t border-black/30">
                   <Checkbox 
-                    label="Li e aceito os Termos de Uso e a Política de Privacidade (obrigatório)" 
+                    label="Declaro que li os Termos de Uso e me responsabilizo pela veracidade das informações e eventos publicados no FrancaEventos" 
                     required 
-                  />
-                  <Checkbox 
-                    label="Desejo receber novidades sobre os eventos de Franca (opcional)" 
                   />
                 </div>
 
