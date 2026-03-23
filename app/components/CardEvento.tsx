@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import IconLocal from "./IconLocal";
 import IconHora from "./IconHora";
 import IconHeart from "./IconHeart";
+import IconHeartFilled from "./IconHeartFilled";
 
 //o componente vai receber essas propriedades (props) para ser reutilizável
 interface PropsCardEvento {
@@ -12,11 +15,13 @@ interface PropsCardEvento {
   imagem: string;
   hora: string;
   preco: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: (id: string | number) => void;
 }
 
-export function CardEvento({ id, titulo, data, local, imagem, hora, preco }: PropsCardEvento) {
+export function CardEvento({ id, titulo, data, local, imagem, hora, preco, isFavorite, onToggleFavorite }: PropsCardEvento) {
   return (
-    <div className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col group cursor-pointer">
+    <div className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col group cursor-pointer relative">
 
       {/* área da imagem */}
       <div className="relative h-48 overflow-hidden">
@@ -29,9 +34,20 @@ export function CardEvento({ id, titulo, data, local, imagem, hora, preco }: Pro
         <div className="absolute top-1 left-1 bg-white/80 backdrop-blur-sm text-gray-900 text-xs font-bold px-3 py-3 rounded-lg shadow-sm">
           {data}
         </div>
-        <div className="absolute top-1 right-1 bg-white/80 backdrop-blur-sm text-gray-900 text-xs font-bold p-3 rounded-lg shadow-sm">
-          <IconHeart />
-        </div>
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (onToggleFavorite) onToggleFavorite(id);
+          }}
+          className={`absolute top-1 right-1 bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-sm hover:scale-110 transition-transform z-10`}
+        >
+          {isFavorite ? (
+            <IconHeartFilled className="text-red-500 fill-red-500 w-[22px] h-[19px]" />
+          ) : (
+            <IconHeart className="text-gray-500" />
+          )}
+        </button>
 
       </div>
 
