@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FiltroCategorias } from "@/app/components/FiltroCategorias";
 import { CardEvento } from "@/app/components/CardEvento";
 import { todosEventos } from "@/app/data/eventosTeste";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/app/components/Button";
 
@@ -16,6 +17,7 @@ function IconCalendar({ className }: { className?: string }) {
 }
 
 export default function PainelOrganizadorPage() {
+  const router = useRouter();
   const [categoriaAtiva, setCategoriaAtiva] = useState("Todos");
   // Simular eventos do organizador: vamos pegar os 4 primeiros
   const eventosDoOrganizador = todosEventos.slice(0, 4);
@@ -50,14 +52,13 @@ export default function PainelOrganizadorPage() {
           </h2>
         </div>
         
-        <Link href="/cadastro-evento" className="inline-block">
-          <Button 
-            className="w-full sm:w-auto"
-            variant="primary"
-          >
-            Adicionar Evento
-          </Button>
-        </Link>
+        <Button 
+          className="w-full sm:w-auto"
+          variant="primary"
+          onClick={() => router.push('/cadastro-evento')}
+        >
+          Adicionar Evento
+        </Button>
       </div>
 
       <FiltroCategorias 
