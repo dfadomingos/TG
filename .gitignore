@@ -40,3 +40,6 @@ next-env.d.ts
 
 .geminiignore
 prompts/
+
+.env
+/app/generated/prisma

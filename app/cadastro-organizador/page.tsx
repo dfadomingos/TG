@@ -148,7 +148,8 @@ export default function CadastroOrganizadorPage() {
 
                 {/* Checkboxes */}
                 <div className="flex flex-col gap-2 mt-1 pt-3 md:pt-3 border-t border-black/30">
-                  <Checkbox 
+                  <Checkbox
+                    name="termos_organizador"
                     label="Declaro que li os Termos de Uso e me responsabilizo pela veracidade das informações e eventos publicados no FrancaEventos" 
                     required 
                   />

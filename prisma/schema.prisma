@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  nome          String   
+  email         String   @unique
+  celular       String?
+  senha         String
+  confirmacao_senha String
+  aceitou_termos    Boolean  @default(false)
+  receber_novidades Boolean  @default(false)
+  role          Role     @default(USER) // Diferencia Usuário de Organizador
+  
+  // Campos específicos de Organizador
+  nome_produtora    String?
+  cnpj              String? @unique
+  link              String?
+  termos_organizador Boolean  @default(false)
+
+  // Relacionamentos
+  events        Event[]  @relation("OrganizerEvents") // Eventos criados
+  favorites     Event[]  @relation("UserFavorites")  // Eventos favoritados
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  titulo       String
+  categoria    String
+  data         DateTime
+  horario      DateTime
+  endereco     String
+  numero       String?
+  bairro       String
+  cidade       String
+  estado       String
+  cep          String
+  preco        Float
+  link         String?
+  imagem       String?
+  descricao    String?
+
+  
+  // Relacionamentos
+  organizerId String
+  organizer   User     @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  favoritedBy User[]   @relation("UserFavorites")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum Role {
+  USER
+  ORGANIZER
+}
