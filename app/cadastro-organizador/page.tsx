@@ -70,7 +70,8 @@ export default function CadastroOrganizadorPage() {
               <p className="text-[#1E293B] font-light text-sm md:text-lg mb-3 md:mb-4 text-center">Divulgue seus eventos</p>
 
               <form className="w-full max-w-[520px] flex flex-col gap-2.5 md:gap-3">
-                <Input 
+                <Input
+                  name="nome"
                   label="Nome Completo" 
                   placeholder="Seu nome" 
                   icon={<IconUser className="w-full h-full" fill="#000000" />} 
@@ -78,14 +79,16 @@ export default function CadastroOrganizadorPage() {
                 
                 <div className="flex flex-col md:flex-row gap-2.5 md:gap-3 w-full">
                   <div className="flex-1">
-                    <Input 
+                    <Input
+                      name="nome_produtora"
                       label="Nome Produtora" 
                       placeholder="Nome produtora" 
                       icon={<IconOrganizer className="w-full h-full" fill="#000000" />} 
                     />
                   </div>
                   <div className="flex-1">
-                    <Input 
+                    <Input
+                      name="cnpj"
                       label="CNPJ" 
                       placeholder="00.000.000/0000-00" 
                       icon={<IconOrganizer className="w-full h-full" fill="#000000" />} 
@@ -95,7 +98,8 @@ export default function CadastroOrganizadorPage() {
 
                 <div className="flex flex-col md:flex-row gap-2.5 md:gap-3 w-full">
                   <div className="flex-1">
-                    <Input 
+                    <Input
+                      name="email"
                       label="Email" 
                       type="email"
                       placeholder="seu@email.com" 
@@ -103,7 +107,8 @@ export default function CadastroOrganizadorPage() {
                     />
                   </div>
                   <div className="flex-1">
-                    <Input 
+                    <Input
+                      name="celular"
                       label="Celular" 
                       type="tel"
                       placeholder="(00)00000-0000" 
@@ -112,7 +117,8 @@ export default function CadastroOrganizadorPage() {
                   </div>
                 </div>
 
-                <Input 
+                <Input
+                  name="link"
                   label="Link Rede Social / Site" 
                   type="url"
                   placeholder="https://..." 
@@ -121,7 +127,8 @@ export default function CadastroOrganizadorPage() {
 
                 <div className="flex flex-col md:flex-row gap-2.5 md:gap-3 w-full">
                   <div className="flex-1">
-                    <Input 
+                    <Input
+                      name="senha"
                       label="Senha" 
                       type="password"
                       placeholder="Digite sua senha" 
@@ -129,7 +136,8 @@ export default function CadastroOrganizadorPage() {
                     />
                   </div>
                   <div className="flex-1">
-                    <Input 
+                    <Input
+                      name="confirmacao_senha"
                       label="Confirma Senha" 
                       type="password"
                       placeholder="Digite sua senha" 
@@ -148,7 +156,7 @@ export default function CadastroOrganizadorPage() {
 
                 {/* Submit Action */}
                 <div className="mt-3 mb-1">
-                  <Button variant="accent" fullWidth className="h-10 md:h-[44px] text-base md:text-lg shadow-lg">
+                  <Button type="submit" variant="accent" fullWidth className="h-10 md:h-[44px] text-base md:text-lg shadow-lg">
                     <div className="flex items-center justify-center gap-4 w-full h-full">
                       <span>Cadastrar</span>
                       <svg width="24" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

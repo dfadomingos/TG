@@ -46,49 +46,51 @@ export default function CadastroEventoPage() {
 
               <form className="w-full flex flex-col gap-4">
                 {/* Title */}
-                <Input label="Titulo do Evento" placeholder="Nome do seu evento" />
+                <Input name="titulo" label="Titulo do Evento" placeholder="Nome do seu evento" />
 
                 {/* Category & Date & Time */}
                 <div className="flex flex-col md:flex-row gap-4 w-full">
                   <div className="flex-[2]">
-                    <Input label="Categoria" placeholder="Ex: Show, Palestra, Esporte" />
+                    <Input name="categoria" label="Categoria" placeholder="Ex: Show, Palestra, Esporte" />
                   </div>
                   <div className="flex-1">
-                    <Input label="Data" type="date" />
+                    <Input name="data" label="Data" type="date" />
                   </div>
                   <div className="flex-1">
-                    <Input label="Horário" type="time" />
+                    <Input name="horario" label="Horário" type="time" />
                   </div>
                 </div>
 
                 {/* Address Row 1 */}
                 <div className="flex flex-col md:flex-row gap-4 w-full">
                   <div className="flex-[3]">
-                    <Input label="Endereço" placeholder="Rua, Avenida, etc." />
+                    <Input name="endereco" label="Endereço" placeholder="Rua, Avenida, etc." />
                   </div>
                   <div className="flex-1">
-                    <Input label="Número" placeholder="123" />
+                    <Input name="numero" label="Número" placeholder="123" />
                   </div>
                 </div>
 
                 {/* Address Row 2 & Price */}
                 <div className="flex flex-col md:flex-row gap-4 w-full">
                   <div className="flex-[2]">
-                    <Input label="Bairro" placeholder="Nome do bairro" />
+                    <Input name="bairro" label="Bairro" placeholder="Nome do bairro" />
                   </div>
                   <div className="flex-1">
-                    <Input label="Preço do ingresso" type="number" step="0.01" placeholder="R$ 0,00" />
+                    <Input name="preco" label="Preço do ingresso" type="number" step="0.01" placeholder="R$ 0,00" />
                   </div>
                 </div>
 
                 {/* Link */}
-                <Input label="Link para compra" type="url" placeholder="https://..." />
+                <Input name="link" label="Link para compra" type="url" placeholder="https://..." />
 
                 {/* Description */}
                 <div className="flex flex-col gap-1 w-full">
-                  <label className="text-gray-900 font-semibold text-sm">Descrição:</label>
+                  <label htmlFor="desc-evento" className="text-gray-900 font-semibold text-sm">Descrição:</label>
                   <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-400 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
-                    <textarea 
+                    <textarea
+                      id="desc-evento"
+                      name="descricao"
                       className="w-full bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400 min-h-[120px] resize-y"
                       placeholder="Descreva os detalhes do evento..."
                     />

@@ -9,6 +9,7 @@ interface LoginInputProps {
   icon: React.ReactNode;
   value: string;
   onChange: (value: string) => void;
+  name: string;
 }
 
 export function LoginInput({
@@ -18,6 +19,7 @@ export function LoginInput({
   icon,
   value,
   onChange,
+  name,
 }: LoginInputProps) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -31,6 +33,7 @@ export function LoginInput({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          name={name}
           className="w-full bg-transparent outline-none text-black placeholder-[#D7D1D1] font-bold text-sm sm:text-base md:text-lg lg:text-xl"
         />
       </div>
