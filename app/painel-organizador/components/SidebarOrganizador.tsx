@@ -1,0 +1,91 @@
+import React from "react";
+import Link from "next/link";
+import { IconHome } from "@/app/components/IconHome";
+import { IconProfileBadge } from "@/app/components/IconProfileBadge";
+import { IconLogout } from "@/app/components/IconLogout";
+
+// Usando IconCalendar para Eventos
+function IconCalendar({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+    </svg>
+  );
+}
+
+interface SidebarProps {
+  userName?: string;
+  userEmail?: string;
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function SidebarOrganizador({ userName = "Meu Perfil", userEmail = "organizador@email.com", isOpen = false, onClose }: SidebarProps) {
+  return (
+    <>
+      <div 
+        className={`md:hidden fixed inset-0 bg-black/60 z-40 transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        onClick={onClose}
+      />
+      
+      <aside className={`
+        w-64 bg-background-1 text-white flex-col justify-between border-r border-blue-900/50
+        fixed md:static inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out flex
+        ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+      `}>
+        <div className="flex flex-col relative w-full h-full overflow-y-auto">
+          {onClose && (
+            <button 
+              onClick={onClose} 
+              className="md:hidden absolute top-4 right-4 text-gray-400 hover:text-white p-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        {/* Profile Info */}
+        <div className="p-6 border-b border-blue-800/50 mb-6 text-center">
+          <h2 className="text-xl font-bold mb-1">{userName}</h2>
+          <p className="text-sm text-gray-300 opacity-80">{userEmail}</p>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex flex-col space-y-2 px-4">
+          <Link 
+            href="/" 
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-blue-800/50 hover:text-white transition-colors"
+          >
+            <IconHome className="w-5 h-5" />
+            <span className="font-semibold">Início</span>
+          </Link>
+          
+          <Link 
+            href="/painel-organizador" 
+            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-800/40 text-white font-bold transition-colors border-l-4 border-background-button"
+          >
+            <IconCalendar className="w-5 h-5" />
+            <span className="font-semibold">Meus Eventos</span>
+          </Link>
+
+          <Link 
+            href="/painel-organizador/dados" 
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-blue-800/50 hover:text-white transition-colors"
+          >
+            <IconProfileBadge className="w-5 h-5" />
+            <span className="font-semibold">Meus Dados</span>
+          </Link>
+        </nav>
+      </div>
+
+      {/* Logout */}
+      <div className="p-4 px-8 mb-4">
+        <button className="flex items-center gap-3 text-gray-300 hover:text-red-400 transition-colors w-full">
+          <IconLogout className="w-5 h-5" />
+          <span className="font-semibold">Sair</span>
+        </button>
+      </div>
+    </aside>
+    </>
+  );
+}
