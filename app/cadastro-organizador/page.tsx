@@ -118,7 +118,7 @@ export default function CadastroOrganizadorPage() {
                 </div>
 
                 <Input
-                  name="link"
+                  name="link_social"
                   label="Link Rede Social / Site" 
                   type="url"
                   placeholder="https://..." 

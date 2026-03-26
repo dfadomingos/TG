@@ -82,7 +82,7 @@ export default function CadastroEventoPage() {
                 </div>
 
                 {/* Link */}
-                <Input name="link" label="Link para compra" type="url" placeholder="https://..." />
+                <Input name="link_compra" label="Link para compra" type="url" placeholder="https://..." />
 
                 {/* Description */}
                 <div className="flex flex-col gap-1 w-full">

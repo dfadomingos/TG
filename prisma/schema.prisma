@@ -26,8 +26,8 @@ model User {
   
   // Campos específicos de Organizador
   nome_produtora    String?
-  cnpj              String? @unique
-  link              String?
+  cnpj              String @unique
+  link_social       String?
   termos_organizador Boolean  @default(false)
 
   // Relacionamentos
@@ -45,14 +45,14 @@ model Event {
   data         DateTime
   horario      DateTime
   endereco     String
-  numero       String?
+  numero       String
   bairro       String
   cidade       String
   estado       String
   cep          String
   preco        Float
-  link         String?
-  imagem       String?
+  link_compra  String?
+  imagem       String
   descricao    String?
 
   
