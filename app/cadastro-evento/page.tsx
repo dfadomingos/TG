@@ -45,8 +45,23 @@ export default function CadastroEventoPage() {
               <p className="text-[#1E293B] font-light text-sm md:text-lg mb-6 text-center">Preencha os dados do novo evento</p>
 
               <form className="w-full flex flex-col gap-4">
+                {/* Image Upload */}
+                <div className="flex flex-col gap-1 w-full mb-2">
+                  <label className="text-gray-900 font-semibold text-sm">Capa do Evento:</label>
+                  <label htmlFor="imagem-evento" className="flex flex-col items-center justify-center w-full h-40 md:h-48 border-2 border-dashed border-gray-400 rounded-xl bg-gray-50 hover:bg-gray-100 hover:border-[#0A2342] transition-colors cursor-pointer group">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <svg className="w-10 h-10 mb-3 text-gray-400 group-hover:text-[#0A2342] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                      </svg>
+                      <p className="mb-2 text-sm text-gray-500 group-hover:text-gray-700"><span className="font-semibold text-[#0A2342]">Clique para enviar</span> ou arraste a imagem</p>
+                      <p className="text-xs text-gray-400">SVG, PNG, JPG ou GIF (MAX. 800x400px)</p>
+                    </div>
+                    <input id="imagem-evento" name="imagem" type="file" className="hidden" accept="image/*" />
+                  </label>
+                </div>
+
                 {/* Title */}
-                <Input name="titulo" label="Titulo do Evento" placeholder="Nome do seu evento" />
+                <Input name="titulo" label="Título do Evento" placeholder="Nome do seu evento" />
 
                 {/* Category & Date & Time */}
                 <div className="flex flex-col md:flex-row gap-4 w-full">
@@ -63,6 +78,9 @@ export default function CadastroEventoPage() {
 
                 {/* Address Row 1 */}
                 <div className="flex flex-col md:flex-row gap-4 w-full">
+                  <div className="flex-1">
+                    <Input name="cep" label="CEP" placeholder="00000-000" />
+                  </div>
                   <div className="flex-[3]">
                     <Input name="endereco" label="Endereço" placeholder="Rua, Avenida, etc." />
                   </div>
@@ -71,18 +89,28 @@ export default function CadastroEventoPage() {
                   </div>
                 </div>
 
-                {/* Address Row 2 & Price */}
+                {/* Address Row 2 */}
                 <div className="flex flex-col md:flex-row gap-4 w-full">
                   <div className="flex-[2]">
                     <Input name="bairro" label="Bairro" placeholder="Nome do bairro" />
                   </div>
+                  <div className="flex-[2]">
+                    <Input name="cidade" label="Cidade" placeholder="Nome da cidade" defaultValue="Franca" />
+                  </div>
                   <div className="flex-1">
-                    <Input name="preco" label="Preço do ingresso" type="number" step="0.01" placeholder="R$ 0,00" />
+                    <Input name="estado" label="Estado" placeholder="UF" defaultValue="SP" />
                   </div>
                 </div>
 
-                {/* Link */}
-                <Input name="link_compra" label="Link para compra" type="url" placeholder="https://..." />
+                {/* Price and Link */}
+                <div className="flex flex-col md:flex-row gap-4 w-full">
+                  <div className="flex-[1]">
+                    <Input name="preco" label="Preço do ingresso" type="number" step="0.01" placeholder="R$ 0,00" />
+                  </div>
+                  <div className="flex-[3]">
+                    <Input name="link_compra" label="Link para compra" type="url" placeholder="https://..." />
+                  </div>
+                </div>
 
                 {/* Description */}
                 <div className="flex flex-col gap-1 w-full">
