@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:seed": "prisma db seed" 
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
@@ -27,8 +28,7 @@
     "eslint-config-next": "16.1.6",
     "prisma": "^6.2.1",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "db:seed": "prisma db seed"
+    "typescript": "^5"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
