@@ -4,7 +4,15 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { Select } from '../components/Select';
 import IconBack from '../components/IconBack';
+import { CategoriaEvento, CATEGORIA_LABELS } from '../types';
+
+// Opções do Select geradas a partir do enum
+const categoriaOptions = Object.values(CategoriaEvento).map((value) => ({
+  value,
+  label: CATEGORIA_LABELS[value],
+}));
 
 export default function CadastroEventoPage() {
   return (
@@ -66,7 +74,12 @@ export default function CadastroEventoPage() {
                 {/* Category & Date & Time */}
                 <div className="flex flex-col md:flex-row gap-4 w-full">
                   <div className="flex-[2]">
-                    <Input name="categoria" label="Categoria" placeholder="Ex: Show, Palestra, Esporte" />
+                    <Select
+                      name="categoria"
+                      label="Categoria"
+                      options={categoriaOptions}
+                      defaultValue=""
+                    />
                   </div>
                   <div className="flex-1">
                     <Input name="data" label="Data" type="date" />
@@ -94,6 +107,13 @@ export default function CadastroEventoPage() {
                   <div className="flex-[2]">
                     <Input name="bairro" label="Bairro" placeholder="Nome do bairro" />
                   </div>
+                  <div className="flex-[2]">
+                    <Input name="complemento" label="Complemento" placeholder="Bloco, sala, etc. (opcional)" />
+                  </div>
+                </div>
+
+                {/* City & State */}
+                <div className="flex flex-col md:flex-row gap-4 w-full">
                   <div className="flex-[2]">
                     <Input name="cidade" label="Cidade" placeholder="Nome da cidade" defaultValue="Franca" />
                   </div>

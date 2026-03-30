@@ -4,12 +4,14 @@ import IconBack from "./IconBack";
 import IconLocal from "./IconLocal";
 import IconCalendar from "./IconCalendar";
 import { Badge } from "./Badge";
+import { CategoriaEvento, CATEGORIA_LABELS } from "../types";
 
 interface EventHeroProps {
   titulo: string;
   imagem: string;
-  categoria?: string;
-  local: string;
+  categoria?: CategoriaEvento;
+  endereco: string;
+  bairro: string;
   data: string;
 }
 
@@ -17,9 +19,15 @@ export function EventHero({
   titulo,
   imagem,
   categoria,
-  local,
+  endereco,
+  bairro,
   data,
 }: EventHeroProps) {
+  // Compõe o local de exibição a partir de endereço + bairro
+  const localExibicao = `${endereco}, ${bairro}`;
+  // Label amigável da categoria
+  const categoriaLabel = categoria ? CATEGORIA_LABELS[categoria] : "Show";
+
   return (
     <section
       className="relative w-full min-h-[300px] lg:min-h-[350px] flex items-end pb-8 pt-16"
@@ -44,7 +52,7 @@ export function EventHero({
       {/* Conteúdo sobre a imagem */}
       <div className="relative z-10 px-4 md:px-14 max-w-[1200px] w-full">
         {/* Badge de categoria */}
-        <Badge className="mb-6">{categoria?.toUpperCase() ?? "SHOW"}</Badge>
+        <Badge className="mb-6">{categoriaLabel.toUpperCase()}</Badge>
 
         {/* Título */}
         <h1 className="text-white font-extrabold mb-5 text-4xl md:text-5xl lg:text-6xl leading-[0.92] tracking-[-0.02em]">
@@ -56,7 +64,7 @@ export function EventHero({
           <div className="flex items-center gap-3">
             <IconLocal className="w-5 h-5 shrink-0" fill="#FFFFFF" />
             <span className="text-white font-bold text-lg md:text-xl">
-              {local}
+              {localExibicao}
             </span>
           </div>
 

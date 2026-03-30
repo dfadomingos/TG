@@ -1,6 +1,10 @@
 "use client"; 
 
 import { useState } from "react";
+import { CategoriaEvento, CATEGORIA_LABELS } from "../types";
+
+// Gera a lista de categorias a partir do enum, com "Todos" no início
+const categorias = ["Todos", ...Object.values(CategoriaEvento).map((c) => CATEGORIA_LABELS[c])];
 
 export function FiltroCategorias({ 
   categoriaAtiva: propCategoria, 
@@ -9,16 +13,6 @@ export function FiltroCategorias({
   categoriaAtiva?: string, 
   onCategoriaChange?: (c: string) => void 
 } = {}) {
-    //lista exemplo  
-  const categorias = [
-    "Todos",
-    "Shows",
-    "Festas",
-    "Bar/Pub",
-    "Teatro",
-    "Workshop",
-    "Esportes",
-  ];
 
   // estado interno fallback
   const [internalState, setInternalState] = useState("Todos");

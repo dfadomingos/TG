@@ -1,5 +1,6 @@
 import { CardEvento } from "./CardEvento";
 import { todosEventos } from "../data/eventosTeste";
+import { formatarData, formatarHora, formatarPreco } from "../utils/formatters";
 
 export function GradeEventos() {
   return (
@@ -18,11 +19,12 @@ export function GradeEventos() {
             key={evento.id}
             id={evento.id}
             titulo={evento.titulo}
-            data={evento.data}
-            local={evento.local}
+            data={formatarData(evento.data_horario)}
+            endereco={evento.endereco}
+            bairro={evento.bairro}
             imagem={evento.imagem}
-            hora={evento.hora}
-            preco={evento.preco}
+            hora={formatarHora(evento.data_horario)}
+            preco={formatarPreco(evento.preco)}
           />
         ))}
       </div>

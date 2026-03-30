@@ -9,7 +9,7 @@ interface LoginInputProps {
   icon: React.ReactNode;
   value: string;
   onChange: (value: string) => void;
-  name: string;
+  name?: string;
 }
 
 export function LoginInput({

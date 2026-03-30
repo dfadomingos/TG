@@ -4,6 +4,7 @@ import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
 import { EventHero } from "@/app/components/EventHero";
 import { EventSidebar } from "@/app/components/EventSidebar";
+import { formatarData, formatarHora, formatarPreco } from "@/app/utils/formatters";
 
 export async function generateMetadata({ params }: any) {
   const resolvedParams = await params;
@@ -11,7 +12,7 @@ export async function generateMetadata({ params }: any) {
   
   return {
     title: evento ? `${evento.titulo} | FrancaEventos` : "Evento não encontrado",
-    description: evento?.local ?? "Detalhes do evento em Franca - SP.",
+    description: evento ? `${evento.endereco}, ${evento.bairro}` : "Detalhes do evento em Franca - SP.",
   };
 }
 
@@ -50,8 +51,9 @@ export default async function EventoPage({ params }: any) {
           titulo={evento.titulo}
           imagem={evento.imagem}
           categoria={evento.categoria}
-          local={evento.local}
-          data={evento.data}
+          endereco={evento.endereco}
+          bairro={evento.bairro}
+          data={formatarData(evento.data_horario)}
         />
 
         {/* Dynamic Content Grid */}
@@ -64,9 +66,7 @@ export default async function EventoPage({ params }: any) {
             </h2>
             <div className="relative">
               <p className="text-black text-base lg:text-lg font-medium leading-[1.6] tracking-wide text-justify">
-                Este é um dos grandes destaques de Franca! O <strong>{evento.titulo}</strong> promete agitar a cidade
-                com uma estrutura impecável e momentos inesquecíveis. Venha aproveitar o melhor da
-                nossa região com muita música, cultura e entretenimento para toda a família. 
+                {evento.descricao}
               </p>
               <p className="mt-4 text-black text-base lg:text-lg font-medium leading-[1.6] tracking-wide text-justify">
                 Garanta seu lugar e venha viver esta experiência única que só acontece aqui em Franca.
@@ -77,8 +77,8 @@ export default async function EventoPage({ params }: any) {
 
           {/* Sidebar Area */}
           <EventSidebar 
-            hora={evento.hora}
-            preco={evento.preco}
+            hora={formatarHora(evento.data_horario)}
+            preco={formatarPreco(evento.preco)}
           />
         </div>
       </main>

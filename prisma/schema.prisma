@@ -18,7 +18,7 @@ model Usuario {
   receber_novidades Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  favoritos         Evento[] @relation("UserFavorites")
+  favoritos         Favorito[]
 }
 
 model Organizador {
@@ -33,37 +33,69 @@ model Organizador {
   aceitou_termos  Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  eventos_criados Evento[] @relation("OrganizerToEvent")
+  eventos_criados Evento[]
 }
 
 model Evento {
   id           String      @id @default(cuid())
   titulo       String
-  descricao    String
-  categoria    String
+  descricao    String      @db.Text
+  categoria    CategoriaEvento
   data_horario DateTime
-  status       EventStatus @default(PUBLISHED)
+  status       EventStatus @default(Publicado)
   destaque     Boolean     @default(false)
   views        Int         @default(0)
+  //endereço
   endereco     String
   numero       String?
   bairro       String
+  complemento  String?
   cidade       String      @default("Franca")
   estado       String      @default("SP")
   cep          String?
+  //ingressos
   preco        Float       @default(0)
   link_compra  String?
   imagem       String
-  organizerId  String
+  //relacionamentos
+  organizerId  String  
+  organizer    Organizador @relation(fields: [organizerId], references: [id])
+  //favoritos
+  favoritedBy  Favorito[]
+
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  organizer    Organizador @relation("OrganizerToEvent", fields: [organizerId], references: [id])
-  favoritedBy  Usuario[]   @relation("UserFavorites")
+  //indices para otimização de busca
+  @@index([data_horario])
+  @@index([categoria])
+}
+
+model Favorito {
+  id        String   @id @default(cuid())
+  usuarioId String
+  eventoId  String
+  createdAt DateTime @default(now()) // quando foi favoritado
+  //relacionamentos
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, eventoId]) // impede que o mesmo usuário favorite o mesmo evento 2x
 }
 
 enum EventStatus {
-  DRAFT
-  PUBLISHED
-  CANCELLED
-  FINISHED
+  Cancelado
+  Rascunho
+  Publicado
+  Finalizado
+}
+
+enum CategoriaEvento {
+  Show
+  Gastronomia
+  Esporte
+  Teatro
+  Palestra
+  Workshop
+  Exposicao
+  Outros
 }

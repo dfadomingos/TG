@@ -7,6 +7,7 @@ import { todosEventos } from "@/app/data/eventosTeste";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/app/components/Button";
+import { formatarData, formatarHora, formatarPreco } from "@/app/utils/formatters";
 
 function IconCalendar({ className }: { className?: string }) {
   return (
@@ -74,21 +75,19 @@ export default function PainelOrganizadorPage() {
               <div key={evento.id} className="flex flex-col h-full group">
                 {/* O card principal */}
                 <div className="flex-1 relative">
-                  {/* Reuse internal props of CardEvento */}
                   <CardEvento
                     id={evento.id}
                     titulo={evento.titulo}
-                    data={evento.data}
-                    local={evento.local}
+                    data={formatarData(evento.data_horario)}
+                    endereco={evento.endereco}
+                    bairro={evento.bairro}
                     imagem={evento.imagem}
-                    hora={evento.hora}
-                    preco={evento.preco}
+                    hora={formatarHora(evento.data_horario)}
+                    preco={formatarPreco(evento.preco)}
                   />
-                  
-                  {/* Overlay for actions when hovering - or just keep it below as requested */}
                 </div>
                 
-                {/* Botões de Ação do Organizador - Renderizados fora do CardEvento para não alterá-lo */}
+                {/* Botões de Ação do Organizador */}
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
                   <Link 
                     href={`/evento/${evento.id}/editar`}

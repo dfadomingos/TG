@@ -5,11 +5,12 @@ import { FiltroCategorias } from "@/app/components/FiltroCategorias";
 import { CardEvento } from "@/app/components/CardEvento";
 import { todosEventos } from "@/app/data/eventosTeste";
 import IconHeart from "@/app/components/IconHeart";
+import { formatarData, formatarHora, formatarPreco } from "@/app/utils/formatters";
 
 export default function PainelUsuarioPage() {
   const [categoriaAtiva, setCategoriaAtiva] = useState("Todos");
   // Simular eventos favoritados: vamos pegar os 4 primeiros
-  const [favoritosIds, setFavoritosIds] = useState<Set<number | string>>(
+  const [favoritosIds, setFavoritosIds] = useState<Set<string>>(
     new Set(todosEventos.slice(0, 4).map(e => e.id))
   );
 
@@ -20,7 +21,7 @@ export default function PainelUsuarioPage() {
     return isFav && mathCategoria;
   });
 
-  const toggleFavorite = (id: number | string) => {
+  const toggleFavorite = (id: string) => {
     setFavoritosIds(prev => {
       const newMap = new Set(prev);
       if (newMap.has(id)) {
@@ -66,11 +67,12 @@ export default function PainelUsuarioPage() {
                 key={evento.id}
                 id={evento.id}
                 titulo={evento.titulo}
-                data={evento.data}
-                local={evento.local}
+                data={formatarData(evento.data_horario)}
+                endereco={evento.endereco}
+                bairro={evento.bairro}
                 imagem={evento.imagem}
-                hora={evento.hora}
-                preco={evento.preco}
+                hora={formatarHora(evento.data_horario)}
+                preco={formatarPreco(evento.preco)}
                 isFavorite={favoritosIds.has(evento.id)}
                 onToggleFavorite={toggleFavorite}
               />

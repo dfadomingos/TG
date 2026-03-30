@@ -3,6 +3,8 @@
 import { useRef, useState, useEffect } from "react";
 import { eventosDestaque } from "../data/eventosTeste";
 import IconLocal from "./IconLocal";
+import { CATEGORIA_LABELS } from "../types";
+import { formatarData } from "../utils/formatters";
 
 export function CarrosselDestaques() {
   const carrosselRef = useRef<HTMLDivElement>(null);
@@ -137,11 +139,11 @@ export function CarrosselDestaques() {
                 {/* conteúdo do card */}
                 <div className={`absolute bottom-0 left-0 p-6 transition-transform duration-500 ${isActive ? 'translate-y-0' : 'translate-y-2'}`}>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block transition-colors ${isActive ? 'bg-background-button text-text-button' : 'bg-gray-700 text-gray-300'}`}>
-                    {evento.categoria}
+                    {CATEGORIA_LABELS[evento.categoria]}
                   </span>
                   <h3 className={`text-2xl font-bold mb-1 transition-colors ${isActive ? 'text-white' : 'text-gray-300'}`}>{evento.titulo}</h3>
                   <p className={`text-sm flex items-center gap-2 transition-colors ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
-                    <IconLocal /> {evento.data}
+                    <IconLocal /> {formatarData(evento.data_horario)}
                   </p>
                 </div>
               </div>

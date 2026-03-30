@@ -8,18 +8,22 @@ import IconHeartFilled from "./IconHeartFilled";
 
 //o componente vai receber essas propriedades (props) para ser reutilizável
 interface PropsCardEvento {
-  id: string | number;
+  id: string;
   titulo: string;
   data: string;
-  local: string;
+  endereco: string;
+  bairro: string;
   imagem: string;
   hora: string;
   preco: string;
   isFavorite?: boolean;
-  onToggleFavorite?: (id: string | number) => void;
+  onToggleFavorite?: (id: string) => void;
 }
 
-export function CardEvento({ id, titulo, data, local, imagem, hora, preco, isFavorite, onToggleFavorite }: PropsCardEvento) {
+export function CardEvento({ id, titulo, data, endereco, bairro, imagem, hora, preco, isFavorite, onToggleFavorite }: PropsCardEvento) {
+  // Compõe o local de exibição a partir de endereço + bairro
+  const localExibicao = `${endereco}, ${bairro}`;
+
   return (
     <div className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col group cursor-pointer relative">
 
@@ -55,7 +59,7 @@ export function CardEvento({ id, titulo, data, local, imagem, hora, preco, isFav
       <div className="p-3 flex flex-col flex-1">
         <h3 className="text-[1.45rem] font-extrabold text-gray-900 mb-2 line-clamp-2">{titulo}</h3>
         <div className="text-sm text-gray-600 mb-4 flex-1 space-y-1">
-          <p className="flex items-center gap-1.5"><IconLocal /> {local}</p>
+          <p className="flex items-center gap-1.5"><IconLocal /> {localExibicao}</p>
           <p className="flex items-center gap-1.5"><IconHora /> {hora}</p>
         </div>
         <Link
