@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Já existe um usuário cadastrado com este email.' }, { status: 400 });
         }
 
+        if (!aceitou_termos) {
+            return NextResponse.json({ error: 'Por favor, aceite os termos' }, { status: 400 });
+        }
+
         //Criptografia
         const senhaHash = await bcrypt.hash(senha, 10);
 
