@@ -1,5 +1,8 @@
-import React from 'react';
+"use client";
+
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Button } from '../components/Button';
@@ -15,6 +18,59 @@ import IconOrganizer from '../components/IconOrganizer';
 import IconShare from '../components/IconShare';
 
 export default function CadastroOrganizadorPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [erro, setErro] = useState('');
+  const [sucesso, setSucesso] = useState('');
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setErro('');
+    setSucesso('');
+    setIsLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+
+    const payload = {
+      nome: formData.get('nome') as string,
+      email: formData.get('email') as string,
+      celular: formData.get('celular') as string,
+      senha: formData.get('senha') as string,
+      confirmacao_senha: formData.get('confirmacao_senha') as string,
+      nome_produtora: formData.get('nome_produtora') as string,
+      cnpj: formData.get('cnpj') as string,
+      link_social: formData.get('link_social') as string || '',
+      aceitou_termos: formData.get('aceitou_termos') === 'on',
+    };
+
+    try {
+      const res = await fetch('/api/organizadores/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErro(data.error || 'Erro ao criar conta.');
+        return;
+      }
+
+      setSucesso(data.message || 'Conta criada com sucesso!');
+
+      // Redireciona para o login após 2 segundos
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+
+    } catch {
+      setErro('Erro de conexão. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[#F8FAFC]">
       <Header />
@@ -69,12 +125,27 @@ export default function CadastroOrganizadorPage() {
               <h1 className="text-[#1E293B] font-bold text-xl md:text-3xl mb-0.5 text-center">Crie sua conta</h1>
               <p className="text-[#1E293B] font-light text-sm md:text-lg mb-3 md:mb-4 text-center">Divulgue seus eventos</p>
 
-              <form className="w-full max-w-[520px] flex flex-col gap-2.5 md:gap-3">
+              {/* Mensagens de feedback */}
+              {erro && (
+                <div className="w-full max-w-[520px] mb-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>{erro}</span>
+                </div>
+              )}
+              {sucesso && (
+                <div className="w-full max-w-[520px] mb-3 px-4 py-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium flex items-center gap-2">
+                  <span>✅</span>
+                  <span>{sucesso}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="w-full max-w-[520px] flex flex-col gap-2.5 md:gap-3">
                 <Input
                   name="nome"
                   label="Nome Completo" 
                   placeholder="Seu nome" 
                   icon={<IconUser className="w-full h-full" fill="#000000" />} 
+                  required
                 />
                 
                 <div className="flex flex-col md:flex-row gap-2.5 md:gap-3 w-full">
@@ -84,6 +155,7 @@ export default function CadastroOrganizadorPage() {
                       label="Nome Produtora" 
                       placeholder="Nome produtora" 
                       icon={<IconOrganizer className="w-full h-full" fill="#000000" />} 
+                      required
                     />
                   </div>
                   <div className="flex-1">
@@ -92,6 +164,7 @@ export default function CadastroOrganizadorPage() {
                       label="CNPJ" 
                       placeholder="00.000.000/0000-00" 
                       icon={<IconOrganizer className="w-full h-full" fill="#000000" />} 
+                      required
                     />
                   </div>
                 </div>
@@ -104,6 +177,7 @@ export default function CadastroOrganizadorPage() {
                       type="email"
                       placeholder="seu@email.com" 
                       icon={<IconEmail className="w-full h-full" fill="#000000" />} 
+                      required
                     />
                   </div>
                   <div className="flex-1">
@@ -113,6 +187,7 @@ export default function CadastroOrganizadorPage() {
                       type="tel"
                       placeholder="(00)00000-0000" 
                       icon={<IconPhone className="w-full h-full" fill="#000000" />} 
+                      required
                     />
                   </div>
                 </div>
@@ -133,6 +208,8 @@ export default function CadastroOrganizadorPage() {
                       type="password"
                       placeholder="Digite sua senha" 
                       icon={<IconLock className="w-full h-full" fill="#000000" />} 
+                      required
+                      minLength={6}
                     />
                   </div>
                   <div className="flex-1">
@@ -142,6 +219,8 @@ export default function CadastroOrganizadorPage() {
                       type="password"
                       placeholder="Digite sua senha" 
                       icon={<IconLock className="w-full h-full" fill="#000000" />} 
+                      required
+                      minLength={6}
                     />
                   </div>
                 </div>
@@ -149,7 +228,7 @@ export default function CadastroOrganizadorPage() {
                 {/* Checkboxes */}
                 <div className="flex flex-col gap-2 mt-1 pt-3 md:pt-3 border-t border-black/30">
                   <Checkbox
-                    name="termos_organizador"
+                    name="aceitou_termos"
                     label="Declaro que li os Termos de Uso e me responsabilizo pela veracidade das informações e eventos publicados no FrancaEventos" 
                     required 
                   />
@@ -157,13 +236,21 @@ export default function CadastroOrganizadorPage() {
 
                 {/* Submit Action */}
                 <div className="mt-3 mb-1">
-                  <Button type="submit" variant="accent" fullWidth className="h-10 md:h-[44px] text-base md:text-lg shadow-lg">
+                  <Button 
+                    type="submit" 
+                    variant="accent" 
+                    fullWidth 
+                    className={`h-10 md:h-[44px] text-base md:text-lg shadow-lg ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    disabled={isLoading}
+                  >
                     <div className="flex items-center justify-center gap-4 w-full h-full">
-                      <span>Cadastrar</span>
-                      <svg width="24" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M12 5L19 12L12 19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
+                      <span>{isLoading ? 'Cadastrando...' : 'Cadastrar'}</span>
+                      {!isLoading && (
+                        <svg width="24" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M5 12H19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M12 5L19 12L12 19" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
                     </div>
                   </Button>
                 </div>
