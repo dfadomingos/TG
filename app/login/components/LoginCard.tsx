@@ -1,37 +1,72 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { LoginInput } from "./LoginInput";
-import { LoginRoleTabs } from "./LoginRoleTabs";
 import IconEmail from "../../components/IconEmail";
 import IconLock from "../../components/IconLock";
 import Link from "next/link";
 
-type Role = "usuario" | "organizador";
-
 export function LoginCard() {
-  const [activeRole, setActiveRole] = useState<Role>("usuario");
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [erro, setErro] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login attempt:", { role: activeRole, email, password });
+    setErro("");
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, senha: password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErro(data.error || "Erro ao fazer login.");
+        return;
+      }
+
+      // Redireciona baseado no tipo de conta
+      if (data.user.tipo === "ORGANIZADOR") {
+        router.push("/painel-organizador");
+      } else {
+        router.push("/painel-usuario");
+      }
+
+    } catch {
+      setErro("Erro de conexão. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="w-full max-w-[550px] rounded-xl overflow-hidden shadow-2xl mx-auto">
-      {/* Role Tabs */}
-      <LoginRoleTabs activeRole={activeRole} onRoleChange={setActiveRole} />
-
-      {/* Horizontal separator below tabs */}
-      <div className="h-px bg-black" />
 
       {/* Form Area */}
       <form
         onSubmit={handleSubmit}
-        className="bg-white px-5 sm:px-8 md:px-10 lg:px-12 py-4 sm:py-5 md:py-6 lg:py-8 flex flex-col gap-3 sm:gap-4 md:gap-5 lg:gap-6"
+        className="bg-white px-5 sm:px-8 md:px-10 lg:px-12 py-6 sm:py-7 md:py-8 lg:py-10 flex flex-col gap-3 sm:gap-4 md:gap-5 lg:gap-6"
       >
+        <h2 className="text-center text-[#1E293B] font-bold text-xl sm:text-2xl md:text-3xl mb-1">
+          Faça seu Login
+        </h2>
+
+        {/* Mensagem de erro */}
+        {erro && (
+          <div className="px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{erro}</span>
+          </div>
+        )}
+
         {/* Email */}
         <LoginInput
           label="Email:"
@@ -65,9 +100,10 @@ export function LoginCard() {
         {/* Botão Entrar */}
         <button
           type="submit"
-          className="w-full bg-background-button border border-background-button text-text-button font-bold text-sm sm:text-base md:text-lg lg:text-xl py-2.5 sm:py-3 md:py-3.5 rounded-full hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer"
+          disabled={isLoading}
+          className={`w-full bg-background-button border border-background-button text-text-button font-bold text-sm sm:text-base md:text-lg lg:text-xl py-2.5 sm:py-3 md:py-3.5 rounded-full hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
         >
-          Entrar
+          {isLoading ? "Entrando..." : "Entrar"}
         </button>
 
         {/* Cadastra-se */}
