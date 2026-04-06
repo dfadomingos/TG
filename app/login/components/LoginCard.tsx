@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
 import { LoginInput } from "./LoginInput";
 import IconEmail from "../../components/IconEmail";
 import IconLock from "../../components/IconLock";
@@ -9,6 +10,7 @@ import Link from "next/link";
 
 export function LoginCard() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +34,9 @@ export function LoginCard() {
         setErro(data.error || "Erro ao fazer login.");
         return;
       }
+
+      // Salva os dados do usuário no contexto de autenticação
+      login(data.user);
 
       // Redireciona baseado no tipo de conta
       if (data.user.tipo === "ORGANIZADOR") {

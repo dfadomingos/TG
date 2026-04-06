@@ -1,44 +1,99 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/contexts/AuthContext";
 import { FiltroCategorias } from "@/app/components/FiltroCategorias";
 import { CardEvento } from "@/app/components/CardEvento";
-import { todosEventos } from "@/app/data/eventosTeste";
 import IconHeart from "@/app/components/IconHeart";
 import { formatarData, formatarHora, formatarPreco } from "@/app/utils/formatters";
 
-export default function PainelUsuarioPage() {
-  const [categoriaAtiva, setCategoriaAtiva] = useState("Todos");
-  // Simular eventos favoritados: vamos pegar os 4 primeiros
-  const [favoritosIds, setFavoritosIds] = useState<Set<string>>(
-    new Set(todosEventos.slice(0, 4).map(e => e.id))
-  );
+interface EventoFavorito {
+  id: string;
+  titulo: string;
+  descricao: string;
+  categoria: string;
+  data_horario: string;
+  endereco: string;
+  bairro: string;
+  imagem: string;
+  preco: number;
+}
 
-  // Filtrar eventos baseados no Set de favoritos e na categoria
-  const eventosExibidos = todosEventos.filter(e => {
-    const isFav = favoritosIds.has(e.id);
-    const mathCategoria = categoriaAtiva === "Todos" || true; // Para o mock, todas categorias servem
-    return isFav && mathCategoria;
+interface FavoritoComEvento {
+  id: string;
+  eventoId: string;
+  evento: EventoFavorito;
+}
+
+export default function PainelUsuarioPage() {
+  const { user, isLoggedIn } = useAuth();
+  const router = useRouter();
+  const [categoriaAtiva, setCategoriaAtiva] = useState("Todos");
+  const [favoritos, setFavoritos] = useState<FavoritoComEvento[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Buscar dados do painel
+  const fetchDashboard = useCallback(async () => {
+    if (!user) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/usuarios/dashboard/${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFavoritos(data.favoritos || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar painel:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      router.push("/login");
+      return;
+    }
+    fetchDashboard();
+  }, [isLoggedIn, router, fetchDashboard]);
+
+  // Filtrar por categoria
+  const eventosFiltrados = favoritos.filter(fav => {
+    if (categoriaAtiva === "Todos") return true;
+    return fav.evento.categoria === categoriaAtiva;
   });
 
-  const toggleFavorite = (id: string) => {
-    setFavoritosIds(prev => {
-      const newMap = new Set(prev);
-      if (newMap.has(id)) {
-        newMap.delete(id);
-      } else {
-        newMap.add(id);
+  // Desfavoritar
+  const handleDesfavoritar = async (eventoId: string) => {
+    if (!user) return;
+
+    // Atualização otimista: remove da lista
+    setFavoritos(prev => prev.filter(f => f.eventoId !== eventoId));
+
+    try {
+      const res = await fetch("/api/favoritos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuarioId: user.id, eventoId }),
+      });
+
+      if (!res.ok) {
+        fetchDashboard();
       }
-      return newMap;
-    });
+    } catch {
+      fetchDashboard();
+    }
   };
+
+  const primeiroNome = user?.nome?.split(" ")[0] || "Usuário";
 
   return (
     <div className="flex flex-col h-full w-full">
       {/* Welcome Message */}
       <div className="mb-8 pl-4 sm:pl-8">
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 mb-1">
-          Olá, Usuário
+          Olá, {primeiroNome}
         </h1>
         <p className="text-gray-500 text-sm md:text-base">
           Bem-vindo ao seu painel de controle
@@ -60,27 +115,31 @@ export default function PainelUsuarioPage() {
 
       {/* Grid de Eventos */}
       <div className="mt-8 px-4 sm:px-8">
-        {eventosExibidos.length > 0 ? (
+        {isLoading ? (
+          <div className="text-center py-20">
+            <p className="text-gray-500">Carregando seus favoritos...</p>
+          </div>
+        ) : eventosFiltrados.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {eventosExibidos.map(evento => (
+            {eventosFiltrados.map(fav => (
               <CardEvento
-                key={evento.id}
-                id={evento.id}
-                titulo={evento.titulo}
-                data={formatarData(evento.data_horario)}
-                endereco={evento.endereco}
-                bairro={evento.bairro}
-                imagem={evento.imagem}
-                hora={formatarHora(evento.data_horario)}
-                preco={formatarPreco(evento.preco)}
-                isFavorite={favoritosIds.has(evento.id)}
-                onToggleFavorite={toggleFavorite}
+                key={fav.id}
+                id={fav.evento.id}
+                titulo={fav.evento.titulo}
+                data={formatarData(new Date(fav.evento.data_horario))}
+                endereco={fav.evento.endereco}
+                bairro={fav.evento.bairro}
+                imagem={fav.evento.imagem}
+                hora={formatarHora(new Date(fav.evento.data_horario))}
+                preco={formatarPreco(fav.evento.preco)}
+                isFavorite={true}
+                onToggleFavorite={handleDesfavoritar}
               />
             ))}
           </div>
         ) : (
           <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-            <p className="text-gray-500">Você não possui eventos favoritados nesta categoria.</p>
+            <p className="text-gray-500">Você não possui eventos favoritados{categoriaAtiva !== "Todos" ? " nesta categoria" : ""}.</p>
           </div>
         )}
       </div>
