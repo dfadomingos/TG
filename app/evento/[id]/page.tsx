@@ -1,24 +1,43 @@
-import { todosEventos } from "../../data/eventosTeste";
 import Link from "next/link";
 import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
 import { EventHero } from "@/app/components/EventHero";
 import { EventSidebar } from "@/app/components/EventSidebar";
 import { formatarData, formatarHora, formatarPreco } from "@/app/utils/formatters";
+import { prisma } from "@/lib/prisma";
+import { notFound } from "next/navigation";
 
-export async function generateMetadata({ params }: any) {
-  const resolvedParams = await params;
-  const evento = todosEventos.find((e) => String(e.id) === resolvedParams.id);
-  
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const evento = await prisma.evento.findUnique({
+    where: { id },
+    select: { titulo: true, endereco: true, bairro: true },
+  });
+
+  if (!evento) {
+    return { title: "Evento não encontrado | FrancaEventos" };
+  }
+
   return {
-    title: evento ? `${evento.titulo} | FrancaEventos` : "Evento não encontrado",
-    description: evento ? `${evento.endereco}, ${evento.bairro}` : "Detalhes do evento em Franca - SP.",
+    title: `${evento.titulo} | FrancaEventos`,
+    description: `${evento.endereco}, ${evento.bairro} - Confira todos os detalhes deste evento em Franca.`,
   };
 }
 
-export default async function EventoPage({ params }: any) {
-  const resolvedParams = await params;
-  const evento = todosEventos.find((e) => String(e.id) === resolvedParams.id);
+export default async function EventoPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  const evento = await prisma.evento.findUnique({
+    where: { id },
+    include: {
+      organizer: {
+        select: {
+          nome: true,
+          nome_produtora: true,
+        },
+      },
+    },
+  });
 
   if (!evento) {
     return (
@@ -50,7 +69,7 @@ export default async function EventoPage({ params }: any) {
         <EventHero 
           titulo={evento.titulo}
           imagem={evento.imagem}
-          categoria={evento.categoria}
+          categoria={evento.categoria as any}
           endereco={evento.endereco}
           bairro={evento.bairro}
           data={formatarData(evento.data_horario)}
@@ -73,6 +92,16 @@ export default async function EventoPage({ params }: any) {
                 Acompanhe o {evento.titulo} e sinta a energia vibrante da nossa cidade.
               </p>
             </div>
+
+            {/* Organizador */}
+            {evento.organizer && (
+              <div className="mt-8 p-4 bg-gray-100 rounded-xl">
+                <p className="text-sm text-gray-500 mb-1">Organizado por</p>
+                <p className="font-bold text-gray-800">
+                  {evento.organizer.nome_produtora || evento.organizer.nome}
+                </p>
+              </div>
+            )}
           </section>
 
           {/* Sidebar Area */}
