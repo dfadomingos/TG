@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/contexts/AuthContext";
 import IconHeader from "@/app/components/IconHeader";
 import { IconLogout } from "@/app/components/IconLogout";
 
 export function HeaderOrganizador({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth();
+  const router = useRouter();
   const primeiroNome = user?.nome?.split(" ")[0] || "Organizador";
+
+  const handleLogout = () => {
+    router.push("/");
+    setTimeout(logout, 100);
+  };
 
   return (
     <header className="bg-background-1 p-3 flex items-center justify-between px-4 sm:px-6 md:px-8 shadow-sm col-span-full relative z-50">
@@ -35,7 +42,7 @@ export function HeaderOrganizador({ onMenuClick }: { onMenuClick?: () => void })
           <span>Olá, {primeiroNome}</span>
         </span>
         <button
-          onClick={logout}
+          onClick={handleLogout}
           className="text-text-1 text-xs sm:text-sm font-medium hover:underline transition-all cursor-pointer bg-transparent border-none flex items-center gap-1"
         >
           <IconLogout className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
