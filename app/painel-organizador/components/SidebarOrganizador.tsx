@@ -1,5 +1,9 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/app/contexts/AuthContext";
 import { IconHome } from "@/app/components/IconHome";
 import { IconProfileBadge } from "@/app/components/IconProfileBadge";
 import { IconLogout } from "@/app/components/IconLogout";
@@ -14,13 +18,22 @@ function IconCalendar({ className }: { className?: string }) {
 }
 
 interface SidebarProps {
-  userName?: string;
-  userEmail?: string;
   isOpen?: boolean;
   onClose?: () => void;
 }
 
-export function SidebarOrganizador({ userName = "Meu Perfil", userEmail = "organizador@email.com", isOpen = false, onClose }: SidebarProps) {
+export function SidebarOrganizador({ isOpen = false, onClose }: SidebarProps) {
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
+
+  const primeiroNome = user?.nome?.split(" ")[0] || "Meu Perfil";
+  const userEmail = user?.email || "";
+
+  const isActive = (path: string) =>
+    pathname === path
+      ? "bg-blue-800/40 text-white font-bold border-l-4 border-background-button"
+      : "text-gray-300 hover:bg-blue-800/50 hover:text-white";
+
   return (
     <>
       <div 
@@ -46,7 +59,7 @@ export function SidebarOrganizador({ userName = "Meu Perfil", userEmail = "organ
           )}
         {/* Profile Info */}
         <div className="p-6 border-b border-blue-800/50 mb-6 text-center">
-          <h2 className="text-xl font-bold mb-1">{userName}</h2>
+          <h2 className="text-xl font-bold mb-1">{primeiroNome}</h2>
           <p className="text-sm text-gray-300 opacity-80">{userEmail}</p>
         </div>
 
@@ -54,7 +67,7 @@ export function SidebarOrganizador({ userName = "Meu Perfil", userEmail = "organ
         <nav className="flex flex-col space-y-2 px-4">
           <Link 
             href="/" 
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-blue-800/50 hover:text-white transition-colors"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive("/")}`}
           >
             <IconHome className="w-5 h-5" />
             <span className="font-semibold">Início</span>
@@ -62,7 +75,7 @@ export function SidebarOrganizador({ userName = "Meu Perfil", userEmail = "organ
           
           <Link 
             href="/painel-organizador" 
-            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-800/40 text-white font-bold transition-colors border-l-4 border-background-button"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive("/painel-organizador")}`}
           >
             <IconCalendar className="w-5 h-5" />
             <span className="font-semibold">Meus Eventos</span>
@@ -70,7 +83,7 @@ export function SidebarOrganizador({ userName = "Meu Perfil", userEmail = "organ
 
           <Link 
             href="/painel-organizador/dados" 
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-blue-800/50 hover:text-white transition-colors"
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive("/painel-organizador/dados")}`}
           >
             <IconProfileBadge className="w-5 h-5" />
             <span className="font-semibold">Meus Dados</span>
@@ -80,7 +93,10 @@ export function SidebarOrganizador({ userName = "Meu Perfil", userEmail = "organ
 
       {/* Logout */}
       <div className="p-4 px-8 mb-4">
-        <button className="flex items-center gap-3 text-gray-300 hover:text-red-400 transition-colors w-full">
+        <button 
+          onClick={logout}
+          className="flex items-center gap-3 text-gray-300 hover:text-red-400 transition-colors w-full cursor-pointer bg-transparent border-none"
+        >
           <IconLogout className="w-5 h-5" />
           <span className="font-semibold">Sair</span>
         </button>

@@ -1,8 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/app/contexts/AuthContext";
 import IconHeader from "@/app/components/IconHeader";
 import { IconLogout } from "@/app/components/IconLogout";
 
 export function HeaderOrganizador({ onMenuClick }: { onMenuClick?: () => void }) {
+  const { user, logout } = useAuth();
+  const primeiroNome = user?.nome?.split(" ")[0] || "Organizador";
+
   return (
     <header className="bg-background-1 p-3 flex items-center justify-between px-4 sm:px-6 md:px-8 shadow-sm col-span-full relative z-50">
       <div className="flex items-center">
@@ -24,12 +30,18 @@ export function HeaderOrganizador({ onMenuClick }: { onMenuClick?: () => void })
         </Link>
       </div>
 
-      <button
-        className="bg-background-button text-text-button font-bold text-xs sm:text-sm py-1.5 sm:py-2 px-4 sm:px-6 rounded-full flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-md"
-      >
-        <span>Olá, Organizador</span>
-        <IconLogout className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1 rotate-180" />
-      </button>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="bg-background-button text-text-button font-bold text-xs sm:text-sm py-1.5 sm:py-2 px-4 sm:px-6 rounded-full flex items-center gap-2 shadow-md">
+          <span>Olá, {primeiroNome}</span>
+        </span>
+        <button
+          onClick={logout}
+          className="text-text-1 text-xs sm:text-sm font-medium hover:underline transition-all cursor-pointer bg-transparent border-none flex items-center gap-1"
+        >
+          <IconLogout className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <span className="hidden sm:inline">Sair</span>
+        </button>
+      </div>
     </header>
   );
 }
