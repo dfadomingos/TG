@@ -1,6 +1,12 @@
+"use client";
+
 import { SearchBar } from "./SearchBar";
 
-export function HomeHero() {
+interface HomeHeroProps {
+  onSearch?: (termo: string) => void;
+}
+
+export function HomeHero({ onSearch }: HomeHeroProps) {
   return (
     <section className="bg-banner px-4 py-6 sm:py-10 md:py-12 flex items-center justify-center">
       <div className="max-w-[1200px] mx-auto text-center w-full px-4">
@@ -11,7 +17,7 @@ export function HomeHero() {
           Shows, festas, bares, teatros e workshops. Sua próxima experiência inesquecível começa aqui.
         </p>
         <div className="flex justify-center w-full max-w-2xl mx-auto">
-          <SearchBar />
+          <SearchBar onSearch={onSearch} />
         </div>
       </div>
     </section>

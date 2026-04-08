@@ -124,10 +124,12 @@ export default function PainelOrganizadorPage() {
         </Button>
       </div>
 
-      <FiltroCategorias 
-        categoriaAtiva={categoriaAtiva} 
-        onCategoriaChange={setCategoriaAtiva} 
-      />
+      <div className="px-4 sm:px-8">
+        <FiltroCategorias 
+          categoriaAtiva={categoriaAtiva} 
+          onCategoriaChange={setCategoriaAtiva} 
+        />
+      </div>
 
       {/* Grid de Eventos */}
       <div className="mt-8 px-4 sm:px-8">

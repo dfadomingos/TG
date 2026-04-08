@@ -3,8 +3,14 @@
 import { useState } from "react";
 import { CategoriaEvento, CATEGORIA_LABELS } from "../types";
 
-// Gera a lista de categorias a partir do enum, com "Todos" no início
-const categorias = ["Todos", ...Object.values(CategoriaEvento).map((c) => CATEGORIA_LABELS[c])];
+// Gera a lista de categorias com valor do enum (para filtrar) e label (para exibir)
+const categorias = [
+  { value: "Todos", label: "Todos" },
+  ...Object.values(CategoriaEvento).map((c) => ({
+    value: c,
+    label: CATEGORIA_LABELS[c],
+  })),
+];
 
 export function FiltroCategorias({ 
   categoriaAtiva: propCategoria, 
@@ -19,21 +25,21 @@ export function FiltroCategorias({
   
   const categoriaAtiva = propCategoria !== undefined ? propCategoria : internalState;
 
-  const handleCategoriaClick = (categoria: string) => {
-    if (onCategoriaChange) onCategoriaChange(categoria);
-    setInternalState(categoria);
+  const handleCategoriaClick = (value: string) => {
+    if (onCategoriaChange) onCategoriaChange(value);
+    setInternalState(value);
   };
 
   return (
-    <div className="flex flex-wrap gap-2 my-2 px-4 sm:px-8">
+    <div className="flex flex-wrap gap-2 my-2">
       {categorias.map((categoria) => {
         // lógica de cor: verificamos se esta categoria é a que está ativa
-        const isActive = categoriaAtiva === categoria;
+        const isActive = categoriaAtiva === categoria.value;
 
         return (
           <button
-            key={categoria}
-            onClick={() => handleCategoriaClick(categoria)}
+            key={categoria.value}
+            onClick={() => handleCategoriaClick(categoria.value)}
             className={`
               px-6 py-2 rounded-full font-bold text-sm transition-all duration-300 border
               ${
@@ -43,7 +49,7 @@ export function FiltroCategorias({
               }
             `}
           >
-            {categoria}
+            {categoria.label}
           </button>
         );
       })}
