@@ -1,7 +1,6 @@
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { LoginHero } from "./components/LoginHero";
-import { HomeCTA } from "../components/HomeCTA";
 
 export const metadata = {
   title: "Login | FrancaEventos",
