@@ -13,7 +13,6 @@ export default function LoginPage() {
     <main className="min-h-screen bg-[#0D47A1] font-(--font-family) selection:bg-blue-100 flex flex-col">
       <Header />
       <LoginHero />
-      <HomeCTA />
       <Footer />
     </main>
   );

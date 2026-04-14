@@ -1,4 +1,5 @@
 import IconMegafone from "./IconMegafone";
+import Link from "next/link";
 
 export function HomeCTA() {
   return (
@@ -15,12 +16,13 @@ export function HomeCTA() {
           </p>
         </div>
 
-        <button 
+        <Link 
+          href="/login"
           className="bg-background-button text-text-button font-bold py-1 md:py-1.5 px-6 md:px-8 rounded-full flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl whitespace-nowrap group shrink-0 w-full sm:w-auto text-xs md:text-sm"
         >
           <IconMegafone />
           <span>Quero Divulgar</span>
-        </button>
+        </Link>
       </div>
 
       {/* Decorative background elements for premium look */}
