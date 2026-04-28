@@ -212,7 +212,7 @@ export function parseDataQ2(dataStr: string): Date | null {
     // Remove pontos e espaços extras
     const cleaned = dataStr.replace(/\./g, '').trim().toUpperCase();
 
-    // Formato: "DIA_SEMANA, DD de MES"
+    // Formato: "DIA_SEMANA, DD de MES - ABERTURA HH:MM"
     const match = cleaned.match(/(\d{1,2})\s+DE\s+(\w{3})/);
     if (!match) return null;
 
@@ -222,16 +222,25 @@ export function parseDataQ2(dataStr: string): Date | null {
 
     if (mesIdx === undefined || isNaN(dia)) return null;
 
-    // Assume o ano corrente; se a data já passou, assume próximo ano
+    // Extrair horário se disponível
+    let hora = 0;
+    let minuto = 0;
+    const timeMatch = cleaned.match(/(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+      hora = parseInt(timeMatch[1], 10);
+      minuto = parseInt(timeMatch[2], 10);
+    }
+
+    // Assume o ano corrente; se a data já passou (tolerância de 1 semana), assume próximo ano
     const agora = new Date();
     let ano = agora.getFullYear();
-    const dataCandidata = new Date(ano, mesIdx, dia);
+    const dataCandidata = new Date(ano, mesIdx, dia, hora, minuto);
 
-    if (dataCandidata < agora) {
+    if (dataCandidata.getTime() < agora.getTime() - (7 * 24 * 60 * 60 * 1000)) {
       ano++;
     }
 
-    return new Date(ano, mesIdx, dia);
+    return new Date(ano, mesIdx, dia, hora, minuto);
   } catch {
     return null;
   }
@@ -730,9 +739,35 @@ export async function getQ2EventsPuppeteer(cidade: string = 'Franca'): Promise<Q
           if (!descricao) descricao = titulo;
 
           // Imagem
-          const imgEl = document.querySelector('img[src*="cdn"], img[class*="banner"], img[class*="event"]');
-          const imagemUrl = (imgEl as HTMLImageElement)?.src || '';
+          let imagemUrl = '';
+          const images = Array.from(document.querySelectorAll('img'));
+          
+          const banner = images.find(img => {
+            const src = (img.src || '').toLowerCase();
+            const alt = (img.alt || '').toLowerCase();
+            
+            // Ignora imagens de logo ou ícones
+            if (src.includes('logo') || alt.includes('logo')) return false;
+            if (src.includes('icon') || src.includes('avatar')) return false;
+            
+            // Ignora imagens dentro de cabecalho ou navegacao
+            const isInsideHeader = !!img.closest('header, nav, [class*="header"], [class*="nav"]');
+            if (isInsideHeader) return false;
 
+            // Se as dimensões estiverem disponíveis e a imagem for um ícone pequeno
+            if (img.width > 0 && img.width < 150) return false;
+
+            // Se for carregada da CDN e não for logo, grande chance de ser o banner
+            if (src.includes('cdn')) return true;
+
+            // Fallback genérico
+            return true;
+          });
+
+          if (banner) {
+            imagemUrl = banner.src;
+          }
+          
           return { titulo, data, local_nome, local_link, preco, descricao, imagemUrl };
         });
 

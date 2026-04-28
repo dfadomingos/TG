@@ -45,7 +45,7 @@ export function CardEvento({ id, titulo, data, endereco, bairro, imagem, hora, p
         {/* área da imagem */}
         <div className="relative h-48 overflow-hidden">
           <img
-            src={imagem}
+            src={imagem || "https://placehold.co/600x400/f3f4f6/94a3b8?text=Imagem+Indispon%C3%ADvel"}
             alt={titulo}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />

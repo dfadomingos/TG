@@ -9,6 +9,9 @@ export async function GET(request: NextRequest) {
     const eventos = await prisma.evento.findMany({
       where: {
         status: 'Publicado',
+        data_horario: {
+          gte: new Date(), // Somente eventos futuros
+        },
         ...(categoria && { categoria: categoria as any }),
       },
       include: {
