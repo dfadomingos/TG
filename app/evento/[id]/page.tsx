@@ -108,6 +108,7 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
           <EventSidebar 
             hora={formatarHora(evento.data_horario)}
             preco={formatarPreco(evento.preco)}
+            link_compra={evento.link_compra}
           />
         </div>
       </main>

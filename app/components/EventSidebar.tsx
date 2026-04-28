@@ -8,9 +8,10 @@ import { Button } from "./Button";
 interface EventSidebarProps {
   hora: string;
   preco: string;
+  link_compra?: string | null;
 }
 
-export function EventSidebar({ hora, preco }: EventSidebarProps) {
+export function EventSidebar({ hora, preco, link_compra }: EventSidebarProps) {
   return (
     <aside className="w-full lg:w-[480px] lg:shrink-0 px-4 md:px-14 lg:px-8 py-8 lg:py-12 bg-transparent">
       <div className="w-full rounded-2xl px-6 md:px-8 py-6 bg-[#D2D1D1]">
@@ -39,9 +40,17 @@ export function EventSidebar({ hora, preco }: EventSidebarProps) {
         </div>
 
         {/* Botão: Comprar Ingresso */}
-        <Button variant="accent" fullWidth className="h-[52px] text-lg mb-6 shadow-md">
-          🎟 Comprar Ingresso
-        </Button>
+        {link_compra ? (
+          <a href={link_compra} target="_blank" rel="noopener noreferrer" className="block w-full mb-6">
+            <Button variant="accent" fullWidth className="h-[52px] text-lg shadow-md">
+              🎟 Comprar Ingresso
+            </Button>
+          </a>
+        ) : (
+          <Button variant="accent" fullWidth className="h-[52px] text-lg mb-6 shadow-md opacity-50 cursor-not-allowed">
+            🎟 Ingressos Indisponíveis
+          </Button>
+        )}
 
         {/* Botões: Favoritar + Compartilhar */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
