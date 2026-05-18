@@ -43,3 +43,5 @@ prompts/
 
 .env
 /app/generated/prisma
+
+eventos_franca\DOCUMENTACAO_EXTRACAO.md
