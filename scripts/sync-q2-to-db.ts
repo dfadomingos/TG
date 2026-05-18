@@ -71,6 +71,8 @@ async function resumirComIA(descricao: string, titulo: string): Promise<string> 
 Sua tarefa é ler a descrição original do evento '${titulo}' e remover todos os textos legais, termos de uso, regras de meia-entrada e restrições burocráticas.
 Crie uma descrição atrativa, animada e direta ao ponto, com no máximo 2 ou 3 parágrafos curtos, destacando apenas as atrações, o estilo da festa e o que vai rolar.
 
+REGRA CRÍTICA: Retorne APENAS o texto da descrição do evento. NÃO adicione introduções, saudações, conclusões ou frases como "Aqui está uma versão...", "Aproveite!" ou "Confira".
+
 Descrição Original:
 """
 ${descricao}

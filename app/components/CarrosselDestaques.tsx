@@ -1,14 +1,48 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { eventosDestaque } from "../data/eventosTeste";
 import IconLocal from "./IconLocal";
 import { CATEGORIA_LABELS } from "../types";
 import { formatarData } from "../utils/formatters";
 
+interface EventoAPI {
+  id: string;
+  titulo: string;
+  categoria: string;
+  data_horario: string;
+  endereco: string;
+  bairro: string;
+  imagem: string;
+  preco: number;
+}
+
 export function CarrosselDestaques() {
   const carrosselRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);  
+  const [eventosDestaque, setEventosDestaque] = useState<EventoAPI[]>([]);
+
+  useEffect(() => {
+    async function fetchDestaques() {
+      try {
+        const res = await fetch("/api/eventos");
+        if (res.ok) {
+          const data: EventoAPI[] = await res.json();
+          const agora = new Date();
+          
+          // Filtrar eventos futuros, ordenar pela data mais próxima e pegar no máximo 5
+          const destaques = data
+            .filter(e => new Date(e.data_horario) >= agora)
+            .sort((a, b) => new Date(a.data_horario).getTime() - new Date(b.data_horario).getTime())
+            .slice(0, 5);
+            
+          setEventosDestaque(destaques);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar eventos em destaque:", error);
+      }
+    }
+    fetchDestaques();
+  }, []);
 
   const scrollToNext = () => {
     if (!carrosselRef.current) return;
@@ -139,11 +173,11 @@ export function CarrosselDestaques() {
                 {/* conteúdo do card */}
                 <div className={`absolute bottom-0 left-0 p-6 transition-transform duration-500 ${isActive ? 'translate-y-0' : 'translate-y-2'}`}>
                   <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block transition-colors ${isActive ? 'bg-background-button text-text-button' : 'bg-gray-700 text-gray-300'}`}>
-                    {CATEGORIA_LABELS[evento.categoria]}
+                    {CATEGORIA_LABELS[evento.categoria as keyof typeof CATEGORIA_LABELS] || evento.categoria}
                   </span>
                   <h3 className={`text-2xl font-bold mb-1 transition-colors ${isActive ? 'text-white' : 'text-gray-300'}`}>{evento.titulo}</h3>
                   <p className={`text-sm flex items-center gap-2 transition-colors ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
-                    <IconLocal /> {formatarData(evento.data_horario)}
+                    <IconLocal /> {formatarData(new Date(evento.data_horario))}
                   </p>
                 </div>
               </div>

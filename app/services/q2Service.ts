@@ -225,7 +225,7 @@ export function parseDataQ2(dataStr: string): Date | null {
     // Extrair horário se disponível
     let hora = 0;
     let minuto = 0;
-    const timeMatch = cleaned.match(/(\d{1,2}):(\d{2})/);
+    const timeMatch = cleaned.match(/(\d{1,2})[:H](\d{2})/);
     if (timeMatch) {
       hora = parseInt(timeMatch[1], 10);
       minuto = parseInt(timeMatch[2], 10);
@@ -682,14 +682,14 @@ export async function getQ2EventsPuppeteer(cidade: string = 'Franca'): Promise<Q
           const allText = document.body.innerText;
           // Padrão: "Dia da semana, DD de Mês" ou similar
           const dataMatch = allText.match(
-            /(Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo)[-,\s]+\d{1,2}\s+de\s+\w+.*?(?:ABERTURA|abertura|Início|início)?\s*\d{1,2}:\d{2}/i
+            /(Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo)(?:-[Ff]eira)?[-,\s]+\d{1,2}\s+de\s+\w+[\s\S]*?(?:ABERTURA|abertura|Início|início)?\s*\d{1,2}[:hH]\d{2}/i
           );
           if (dataMatch) {
             data = dataMatch[0].trim();
           } else {
             // Fallback: busca qualquer texto com formato de data
             const dataFallback = allText.match(
-              /(?:SEG|TER|QUA|QUI|SEX|SÁB|DOM|Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo)[.,\s]+\d{1,2}\s+de\s+\w+/i
+              /(?:SEG|TER|QUA|QUI|SEX|SÁB|DOM|Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo)(?:-[Ff]eira)?[.,\s-]+\d{1,2}\s+de\s+\w+/i
             );
             if (dataFallback) data = dataFallback[0].trim();
           }
