@@ -294,10 +294,16 @@ export function parseLocalQ2(localStr: string): {
  * Exemplo: "a partir de R$ 30.00" → 30.0
  */
 export function parsePrecoQ2(precoStr?: string): number {
-  if (!precoStr) return 0;
+  if (precoStr === undefined || precoStr === null || precoStr.trim() === '') return -1;
+  
+  const precoStrLimpo = precoStr.trim().toLowerCase();
+  if (precoStrLimpo.includes('gratuito') || precoStrLimpo.includes('grátis') || precoStrLimpo.includes('gratis') || precoStrLimpo.includes('free')) {
+    return 0;
+  }
+  
   const match = precoStr.match(/R\$\s*([\d.,]+)/);
-  if (!match) return 0;
-  return parseFloat(match[1].replace(',', '.')) || 0;
+  if (!match) return -1;
+  return parseFloat(match[1].replace(',', '.')) || -1;
 }
 
 // ─── Normalização ───────────────────────────────────────────────────

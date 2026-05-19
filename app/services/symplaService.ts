@@ -230,8 +230,8 @@ export function normalizeSymplaEvent(raw: SymplaEventRaw): SymplaEventNormalized
     endereco = partes[0].trim();
   }
 
-  // Preço - O Sympla não lista preço no card da vitrine geralmente, então setamos 0 para "A consultar"
-  const preco = 0;
+  // Preço - O Sympla não lista preço no card da vitrine geralmente, então setamos -1 para "Ver ingressos"
+  const preco = -1;
 
   return {
     titulo: raw.titulo,

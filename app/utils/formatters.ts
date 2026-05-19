@@ -29,6 +29,7 @@ export function formatarHora(data: Date): string {
  * Ex: "R$ 50,00" ou "Gratuito"
  */
 export function formatarPreco(preco: number): string {
+  if (preco < 0) return "Ver ingressos";
   if (preco === 0) return "Gratuito";
   return preco.toLocaleString("pt-BR", {
     style: "currency",

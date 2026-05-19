@@ -572,8 +572,8 @@ export function normalizeDuoTicketEvent(raw: DuoTicketEventRaw): DuoTicketEventN
     link = `${BASE_URL}/${link.replace(/^\//, '')}`;
   }
 
-  // Preço — DuoTicket não exibe preço no card (carregado via JS async)
-  const preco = 0;
+  // Preço — DuoTicket não exibe preço no card (carregado via JS async), então definimos como -1 para indicar que necessita consultar o site ("Ver ingressos")
+  const preco = -1;
 
   return {
     titulo: raw.titulo,
