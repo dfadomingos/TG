@@ -1,21 +1,23 @@
 /**
- * Script para extrair eventos do Sympla e sincronizar diretamente com o Banco de Dados (Prisma).
+ * Script para extrair eventos do DuoTicket e sincronizar diretamente com o Banco de Dados (Prisma).
  * 
- * Execução: npx tsx scripts/sync-sympla-to-db.ts
+ * Execução: npx tsx scripts/sync-duoticket-to-db.ts
  */
 import { config } from 'dotenv';
 config();
 import { PrismaClient, CategoriaEvento, EventStatus } from '@prisma/client';
 import { 
-  getSymplaEventsPuppeteer, 
-  normalizeSymplaEvent
-} from '../app/services/symplaService';
+  getDuoTicketEvents, 
+  getDuoTicketEventDetail,
+  normalizeDuoTicketEvent
+} from '../app/services/duoticketService';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
 async function downloadImage(url: string | null): Promise<string | null> {
   if (!url) return null;
+  // Se já for um caminho local, ignora
   if (url.startsWith('/')) return url;
   
   try {
@@ -25,11 +27,13 @@ async function downloadImage(url: string | null): Promise<string | null> {
     const arrayBuffer = await res.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
+    // Ignora imagens muito pequenas (provavelmente ícones ou tracking pixels)
     if (buffer.length < 5000) {
       console.warn(`   ⚠️ Imagem muito pequena (${buffer.length} bytes), ignorando: ${url.substring(0, 60)}...`);
       return null;
     }
     
+    // Detecta extensão pelo content-type se possível
     const contentType = res.headers.get('content-type') || '';
     let ext = 'jpg';
     if (contentType.includes('png')) ext = 'png';
@@ -41,7 +45,7 @@ async function downloadImage(url: string | null): Promise<string | null> {
     }
     
     const hash = crypto.createHash('md5').update(url).digest('hex').substring(0, 10);
-    const filename = `sympla-${hash}.${ext}`;
+    const filename = `duoticket-${hash}.${ext}`;
     
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'eventos-externos');
     if (!fs.existsSync(uploadDir)) {
@@ -58,6 +62,9 @@ async function downloadImage(url: string | null): Promise<string | null> {
   }
 }
 
+let geminiQuotaExceeded = false;
+let openaiQuotaExceeded = false;
+
 async function resumirComIA(descricao: string, titulo: string): Promise<string> {
   // Se a descrição for genérica e curta, usaremos a IA para gerar uma introdução atraente baseada no título
   const prompt = `Você é um curador de um guia cultural de eventos de Franca-SP. 
@@ -70,9 +77,9 @@ REGRA CRÍTICA: Retorne APENAS o texto da descrição do evento. NÃO adicione i
 Resumo:`;
 
   // Tenta Gemini com retry em caso de Rate Limit (429)
-  if (process.env.GEMINI_API_KEY) {
+  if (process.env.GEMINI_API_KEY && !geminiQuotaExceeded) {
     const maxRetries = 3;
-    let delay = 2000;
+    let delay = 2000; // Começa com 2s de delay se houver falha
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -86,9 +93,19 @@ Resumo:`;
           const data = await res.json();
           const textoGerado = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (textoGerado) return textoGerado.trim();
-          break;
+          break; // Sai do loop se deu certo mas veio vazio
         } else if (res.status === 429) {
           const errorData = await res.json().catch(() => ({}));
+          const errorMsg = errorData.error?.message || '';
+          
+          // Verifica se é erro de cota excedida total do plano, e não apenas limite de requisições por minuto
+          if (errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('exceeded') || errorMsg.toLowerCase().includes('limit')) {
+            console.warn(`   ⚠️ Gemini Quota Excedida! Desabilitando chamadas subsequentes ao Gemini nesta execução.`);
+            geminiQuotaExceeded = true;
+            break; // Aborta retentativas imediatamente
+          }
+
+          // Se for apenas rate limit temporário (RPM), tenta ler o retryDelay ou calcula um exponencial
           const retryDelaySecs = errorData.error?.details?.find((d: any) => d['@type']?.includes('RetryInfo'))?.retryDelay;
           let waitTime = delay;
           if (retryDelaySecs) {
@@ -99,11 +116,11 @@ Resumo:`;
           }
           console.warn(`   ⚠️ Gemini Rate Limit (429) na tentativa ${attempt}/${maxRetries}. Aguardando ${waitTime / 1000}s...`);
           await new Promise((r) => setTimeout(r, waitTime));
-          delay *= 2;
+          delay *= 2; // Dobra o delay para a próxima tentativa caso não tenha retryDelay explícito
         } else {
           const errorData = await res.json().catch(() => ({}));
           console.warn(`   ⚠️ Erro API Gemini (${res.status}):`, JSON.stringify(errorData));
-          break;
+          break; // Erros diferentes de 429 não devem ser retentados
         }
       } catch (e) {
         console.warn(`   ⚠️ Falha na chamada do Gemini (Tentativa ${attempt}/${maxRetries}):`, e);
@@ -114,6 +131,39 @@ Resumo:`;
     }
   }
 
+  // Tenta OpenAI se Gemini falhou ou está sem cota
+  if (process.env.OPENAI_API_KEY && !openaiQuotaExceeded) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 300,
+          temperature: 0.7
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const textoGerado = data.choices?.[0]?.message?.content;
+        if (textoGerado) return textoGerado.trim();
+      } else if (res.status === 429 || res.status === 402) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.error?.message || '';
+        if (errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('exceeded') || errorMsg.toLowerCase().includes('billing')) {
+          console.warn(`   ⚠️ OpenAI Quota/Billing Excedido! Desabilitando chamadas subsequentes à OpenAI nesta execução.`);
+          openaiQuotaExceeded = true;
+        }
+      }
+    } catch (e) {
+      console.warn("   ⚠️ Erro ao acessar IA da OpenAI.");
+    }
+  }
+
   return descricao; // Fallback
 }
 
@@ -121,57 +171,64 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('━'.repeat(60));
-  console.log('🔄 INICIANDO SINCRONIZAÇÃO: SYMPLA -> BANCO DE DADOS');
+  console.log('🔄 INICIANDO SINCRONIZAÇÃO: DUOTICKET -> BANCO DE DADOS');
   console.log('━'.repeat(60));
   
+  console.log('🔑 Gemini API Key:', process.env.GEMINI_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
+  console.log('🔑 OpenAI API Key:', process.env.OPENAI_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
+
   try {
-    // 1. Garantir que o organizador "Sympla" existe
+    // 1. Garantir que o organizador "DuoTicket" existe
     console.log('\n👤 Verificando organizador do sistema...');
     const organizer = await prisma.organizador.upsert({
-      where: { email: 'sistema@sympla.com.br' },
+      where: { email: 'sistema@duoticket.com.br' },
       update: {},
       create: {
-        nome: 'Sympla',
-        email: 'sistema@sympla.com.br',
+        nome: 'DuoTicket',
+        email: 'sistema@duoticket.com.br',
         celular: '0000000000',
-        senha: 'SISTEMA_NO_LOGIN',
-        nome_produtora: 'Sympla (Automático)',
-        cnpj: '00.000.000/0002-00',
+        senha: 'SISTEMA_NO_LOGIN', // Senha dummy pois é automático
+        nome_produtora: 'DuoTicket (Automático)',
+        cnpj: '00.000.000/0003-00', // CNPJ fictício para o sistema
         aceitou_termos: true,
       },
     });
     console.log(`   ✅ Organizador ID: ${organizer.id}`);
 
-    // 2. Extrair eventos
-    console.log('\n🚀 Extraindo eventos do Sympla...');
-    const rawEvents = await getSymplaEventsPuppeteer('Franca');
+    // 2. Extrair eventos via Cheerio
+    console.log('\n🚀 Extraindo eventos do DuoTicket...');
+    const rawEvents = await getDuoTicketEvents('Franca');
 
     if (rawEvents.length === 0) {
       console.log('🛑 Nenhum evento encontrado para sincronizar.');
       return;
     }
 
-    // 3. Normalizar e salvar no banco
+    // 3. Enriquecer com detalhes das páginas individuais
+    console.log(`\n📋 Buscando detalhes de ${rawEvents.length} evento(s)...`);
+    for (let i = 0; i < rawEvents.length; i++) {
+      const raw = rawEvents[i];
+      console.log(`   📄 [${i + 1}/${rawEvents.length}] ${raw.titulo}`);
+      
+      const detail = await getDuoTicketEventDetail(raw.link);
+      if (detail.local_nome) raw.local_nome = detail.local_nome;
+      if (detail.descricao) raw.descricao = detail.descricao;
+
+      // Pequeno delay para não sobrecarregar o servidor
+      await new Promise((r) => setTimeout(r, 500));
+    }
+
+    // 4. Normalizar e salvar no banco
     console.log(`\n💾 Sincronizando ${rawEvents.length} eventos...`);
     let criados = 0;
     let atualizados = 0;
 
     for (const raw of rawEvents) {
-      const normalized = normalizeSymplaEvent(raw);
+      const normalized = normalizeDuoTicketEvent(raw);
       
       if (!normalized.data_horario) continue;
 
-      // 3.1. Baixar a imagem (se disponível)
-      const localImagePath = await downloadImage(normalized.imagem);
-      const finalImagePath = localImagePath || normalized.imagem || '';
-
-      // 3.2. Formatar descrição com IA
-      let descricaoFormatada = normalized.descricao;
-      if (process.env.GEMINI_API_KEY) {
-         descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
-      }
-
-      // Verifica se o evento já existe
+      // 4.1. Verifica se o evento já existe (pelo link de compra ou título + data)
       const existingEvent = await prisma.evento.findFirst({
         where: {
           OR: [
@@ -183,6 +240,43 @@ async function main() {
           ]
         }
       });
+
+      let finalImagePath = '';
+      let descricaoFormatada = '';
+      let chamouIA = false;
+
+      if (existingEvent) {
+        // Reaproveita imagem e descrição existentes para poupar chamadas de API e downloads
+        finalImagePath = existingEvent.imagem;
+        descricaoFormatada = existingEvent.descricao;
+
+        // Se a imagem no banco não é local, tenta baixar novamente
+        const precisaBaixarImagem = !finalImagePath || !finalImagePath.startsWith('/uploads/');
+        // Se a descrição é muito curta ou genérica, roda a IA novamente
+        const precisaIA = !descricaoFormatada || descricaoFormatada.length < 50 || descricaoFormatada.includes('Mais informações no site oficial');
+
+        if (precisaBaixarImagem) {
+          const localImagePath = await downloadImage(normalized.imagem);
+          finalImagePath = localImagePath || normalized.imagem || '';
+        }
+
+        if (precisaIA && (process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY)) {
+          console.log(`      🤖 [IA] Gerando descrição para evento atualizado: "${normalized.titulo}"`);
+          descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
+          chamouIA = true;
+        }
+      } else {
+        // Evento novo: executa download de imagem e IA completo
+        const localImagePath = await downloadImage(normalized.imagem);
+        finalImagePath = localImagePath || normalized.imagem || '';
+
+        descricaoFormatada = normalized.descricao;
+        if (process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY) {
+          console.log(`      🤖 [IA] Gerando descrição para novo evento: "${normalized.titulo}"`);
+          descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
+          chamouIA = true;
+        }
+      }
 
       const eventData = {
         titulo: normalized.titulo,
@@ -204,6 +298,7 @@ async function main() {
       };
 
       if (existingEvent) {
+        // Atualiza se já existe
         await prisma.evento.update({
           where: { id: existingEvent.id },
           data: eventData,
@@ -211,6 +306,7 @@ async function main() {
         atualizados++;
         console.log(`   ♻️  Atualizado: "${normalized.titulo}"`);
       } else {
+        // Cria novo
         await prisma.evento.create({
           data: eventData,
         });
@@ -218,8 +314,12 @@ async function main() {
         console.log(`   ✨ Criado: "${normalized.titulo}"`);
       }
 
-      // Pequena pausa para evitar estourar limites das APIs externas (Gemini/imagens)
-      await new Promise((r) => setTimeout(r, 2000));
+      // Pequena pausa apenas se chamou a IA, para evitar estourar limites
+      if (chamouIA) {
+        await new Promise((r) => setTimeout(r, 2000));
+      } else {
+        await new Promise((r) => setTimeout(r, 100)); // Delay bem menor se for só DB
+      }
     }
 
     console.log('\n' + '━'.repeat(60));

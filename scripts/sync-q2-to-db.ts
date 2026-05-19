@@ -80,24 +80,48 @@ ${descricao}
 
 Resumo:`;
 
-  // Tenta Gemini
+  // Tenta Gemini com retry em caso de Rate Limit (429)
   if (process.env.GEMINI_API_KEY) {
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const textoGerado = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (textoGerado) return textoGerado.trim();
-      } else {
-        const errorData = await res.json();
-        console.warn(`   ⚠️ Erro API Gemini (${res.status}):`, JSON.stringify(errorData));
+    const maxRetries = 3;
+    let delay = 2000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const textoGerado = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (textoGerado) return textoGerado.trim();
+          break;
+        } else if (res.status === 429) {
+          const errorData = await res.json().catch(() => ({}));
+          const retryDelaySecs = errorData.error?.details?.find((d: any) => d['@type']?.includes('RetryInfo'))?.retryDelay;
+          let waitTime = delay;
+          if (retryDelaySecs) {
+            const parsedSecs = parseInt(retryDelaySecs.replace('s', ''), 10);
+            if (!isNaN(parsedSecs)) {
+              waitTime = (parsedSecs + 1) * 1000;
+            }
+          }
+          console.warn(`   ⚠️ Gemini Rate Limit (429) na tentativa ${attempt}/${maxRetries}. Aguardando ${waitTime / 1000}s...`);
+          await new Promise((r) => setTimeout(r, waitTime));
+          delay *= 2;
+        } else {
+          const errorData = await res.json().catch(() => ({}));
+          console.warn(`   ⚠️ Erro API Gemini (${res.status}):`, JSON.stringify(errorData));
+          break;
+        }
+      } catch (e) {
+        console.warn(`   ⚠️ Falha na chamada do Gemini (Tentativa ${attempt}/${maxRetries}):`, e);
+        if (attempt === maxRetries) break;
+        await new Promise((r) => setTimeout(r, delay));
+        delay *= 2;
       }
-    } catch (e) {
-      console.warn("   ⚠️ Erro ao acessar IA do Gemini.", e);
     }
   }
 
@@ -241,6 +265,9 @@ async function main() {
         criados++;
         console.log(`   ✨ Criado: "${normalized.titulo}"`);
       }
+
+      // Pequena pausa para evitar estourar limites das APIs externas (Gemini/imagens)
+      await new Promise((r) => setTimeout(r, 2000));
     }
 
     console.log('\n' + '━'.repeat(60));

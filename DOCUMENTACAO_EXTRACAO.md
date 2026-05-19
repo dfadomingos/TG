@@ -2,20 +2,25 @@
 
 Este documento detalha o funcionamento do sistema automatizado de integração de eventos desenvolvido para alimentar o banco de dados da aplicação **Eventos Franca**.
 
-Atualmente, o sistema extrai dados de duas grandes plataformas de venda de ingressos: **Q2 Ingressos** e **Sympla**.
+Atualmente, o sistema extrai dados de três plataformas de venda de ingressos: **Q2 Ingressos**, **Sympla** e **DuoTicket**.
 
 ---
 
-## 1. O Desafio: Por que usamos o Puppeteer?
+## 1. O Desafio: Puppeteer vs Cheerio
+
+### Q2 e Sympla (Puppeteer)
 Ambas as plataformas utilizam arquiteturas modernas focadas no front-end (Single Page Applications - SPAs) com renderização no lado do cliente (Client-Side Rendering). Isso significa que, se usarmos ferramentas comuns de raspagem (como Cheerio ou cURL), o código-fonte HTML recebido estará vazio, sem nenhum dado dos eventos listados.
 
 Para resolver isso, implementamos o **Puppeteer**. O Puppeteer levanta um navegador Google Chrome "invisível" (headless), que processa o JavaScript das plataformas reais, aguarda os cards de eventos serem desenhados na tela e, em seguida, varre o Document Object Model (DOM) resultante para ler as informações com precisão.
+
+### DuoTicket (Cheerio)
+Diferente das outras duas, o DuoTicket utiliza Server-Side Rendering (SSR) com PHP, jQuery e Bootstrap. Isso significa que o HTML retornado pelo servidor já contém todos os cards de eventos renderizados, sem necessidade de executar JavaScript. Assim, usamos o **Cheerio** diretamente (parsing de HTML estático), resultando em uma extração mais rápida (~2s vs ~30s), mais leve (sem Chrome headless) e mais confiável (sem timeouts de renderização).
 
 ---
 
 ## 2. A Camada de Extração (`app/services/`)
 
-Cada plataforma possui o seu próprio arquivo de serviço (`q2Service.ts` e `symplaService.ts`), pois a estrutura HTML de ambas é radicalmente diferente. O fluxo básico consiste em três etapas:
+Cada plataforma possui o seu próprio arquivo de serviço (`q2Service.ts`, `symplaService.ts` e `duoticketService.ts`), pois a estrutura HTML de cada uma é radicalmente diferente. O fluxo básico consiste em três etapas:
 
 ### 2.1 Leitura do DOM e Regex Avançado
 O robô busca elementos essenciais dentro dos *cards* de eventos:
@@ -34,11 +39,11 @@ Em paralelo, a aplicação possui um dicionário interno mapeando nomes amigáve
 
 ## 3. A Camada de Sincronização (`scripts/sync-*.ts`)
 
-Os scripts executáveis (`sync-q2-to-db.ts` e `sync-sympla-to-db.ts`) são os maestros do processo. Eles unem a extração com o Banco de Dados.
+Os scripts executáveis (`sync-q2-to-db.ts`, `sync-sympla-to-db.ts` e `sync-duoticket-to-db.ts`) são os maestros do processo. Eles unem a extração com o Banco de Dados.
 
 O fluxo de sincronização é o seguinte:
 
-1. **Garantia de Organizador**: Cria ou atualiza um perfil "Dummy" (fictício) de Organizador no banco de dados para representar a plataforma de origem (com CNPJs reservados, ex: `00.000.000/0001-00` para Q2 e `00.000.000/0002-00` para Sympla).
+1. **Garantia de Organizador**: Cria ou atualiza um perfil "Dummy" (fictício) de Organizador no banco de dados para representar a plataforma de origem (com CNPJs reservados, ex: `00.000.000/0001-00` para Q2, `00.000.000/0002-00` para Sympla e `00.000.000/0003-00` para DuoTicket).
 2. **Download Seguro de Mídia (`downloadImage`)**: O script intercepta a URL das imagens de capa e faz o download binário. Há travas de segurança que ignoram imagens menores de 5KB (para evitar ícones/tracking pixels). A imagem real (webp/jpg) é então armazenada de forma estática no nosso servidor em `/public/uploads/eventos-externos`.
 3. **Curadoria por Inteligência Artificial (Gemini)**:
    - Os textos brutos de descrição (quando existem) ou os títulos são enviados à API do **Google Gemini**.
