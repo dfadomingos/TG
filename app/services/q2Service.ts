@@ -139,6 +139,24 @@ const VENUES_ADDRESSES: Record<string, VenueAddress> = {
     cep: '14401-080',
     endereco_completo: 'R. José Marquês García, 197 - Cidade Nova, Franca - SP, 14401-080',
   },
+  'clube dos servidores': {
+    rua: 'Avenida São Vicente',
+    numero: '4000',
+    bairro: 'Jardim Noemia',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-720',
+    endereco_completo: 'Av. São Vicente, 4000 - Jardim Noemia, Franca - SP, 14403-720',
+  },
+  'cedro espaco de eventos': {
+    rua: 'Avenida Presidente Vargas',
+    numero: '3630',
+    bairro: 'Recanto do Itambé',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14402-000',
+    endereco_completo: 'Av. Presidente Vargas, 3630 - Recanto do Itambé, Franca - SP',
+  }
 };
 
 /**
