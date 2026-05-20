@@ -48,7 +48,7 @@ model Evento {
   //endereço
   endereco     String
   numero       String?
-  bairro       String
+  bairro       String?
   complemento  String?
   cidade       String      @default("Franca")
   estado       String      @default("SP")

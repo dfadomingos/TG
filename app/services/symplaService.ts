@@ -17,7 +17,7 @@ export interface SymplaEventNormalized {
   data_horario: Date | null;
   endereco: string;
   numero: string | null;
-  bairro: string;
+  bairro: string | null;
   complemento: string | null;
   cidade: string;
   estado: string;
@@ -46,6 +46,15 @@ interface VenueAddress {
 }
 
 const VENUES_ADDRESSES: Record<string, VenueAddress> = {
+  // Casas de show / cultura
+  'the roots franca': {
+    rua: 'Rua Pernambuco',
+    numero: '1177',
+    bairro: 'Vila Aparecida',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14401-290',
+  },
   'teatro judas iscariotes': {
     rua: 'Rua José Marquês García',
     numero: '395',
@@ -54,6 +63,7 @@ const VENUES_ADDRESSES: Record<string, VenueAddress> = {
     estado: 'SP',
     cep: '14401-080',
   },
+  // Espaços de eventos
   'villa eventos': {
     rua: 'Rodovia Engenheiro Ronan Rocha',
     numero: '19304',
@@ -62,8 +72,84 @@ const VENUES_ADDRESSES: Record<string, VenueAddress> = {
     estado: 'SP',
     cep: '14404-080',
   },
+  'cedro espaco de eventos': {
+    rua: 'Av. Presidente Vargas',
+    numero: '3630',
+    bairro: 'Recanto do Itambé',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '',
+  },
+  'espaco olhos d\'agua': {
+    rua: 'Rua dos Bem-Te-Vis',
+    numero: '4160',
+    bairro: 'Jardim Primavera',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '',
+  },
+  'olhos d\'agua': {
+    rua: 'Rua dos Bem-Te-Vis',
+    numero: '4160',
+    bairro: 'Jardim Primavera',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '',
+  },
+  // Hotéis
+  'tower franca hotel': {
+    rua: 'Rua Doutor Júlio Cardoso',
+    numero: '2214',
+    bairro: 'Centro',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14400-730',
+  },
+  'comfort franca': {
+    rua: 'Rua Paulo Roberto Cavalheiro Coelho',
+    numero: '1505',
+    bairro: 'Jardim Alvorada',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-200',
+  },
+  'comfort hotel franca': {
+    rua: 'Rua Paulo Roberto Cavalheiro Coelho',
+    numero: '1505',
+    bairro: 'Jardim Alvorada',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-200',
+  },
+  // Entidades / Instituições
+  'sindifranca': {
+    rua: 'Rua Doutor Cecim Miguel',
+    numero: '2760',
+    bairro: 'Parque Moema',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '',
+  },
+  // Outros locais
+  'adega dissul': {
+    rua: 'Avenida Paulo VI',
+    numero: '635',
+    bairro: 'Residencial Paraíso',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-143',
+  },
+  'praca frei roque pissioni': {
+    rua: 'Praça Frei Roque Pissioni',
+    numero: 's/n',
+    bairro: 'São Joaquim',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14406-306',
+  },
   // Mais locais podem ser adicionados conforme aparecem
 };
+
 
 function resolveVenueAddress(venueName: string): VenueAddress | null {
   const normalized = venueName.toLowerCase()
@@ -211,7 +297,7 @@ export function normalizeSymplaEvent(raw: SymplaEventRaw): SymplaEventNormalized
   // Endereço
   let endereco = 'Em breve';
   let numero = null;
-  let bairro = 'Centro';
+  let bairro: string | null = null;
   let cidade = 'Franca';
   let estado = 'SP';
   let cep = null;

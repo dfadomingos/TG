@@ -45,7 +45,7 @@ export interface Q2EventRaw {
 export interface VenueAddress {
   rua: string;
   numero: string;
-  bairro: string;
+  bairro: string | null;
   cidade: string;
   estado: string;
   cep: string;
@@ -59,7 +59,7 @@ export interface Q2EventNormalized {
   data_horario: Date | null;
   endereco: string;      // Rua/Avenida do local
   numero: string | null; // Número do endereço
-  bairro: string;        // Bairro
+  bairro: string | null;        // Bairro
   complemento: string | null;
   cidade: string;
   estado: string;
@@ -338,7 +338,7 @@ export function normalizeQ2Event(raw: Q2EventRaw): Q2EventNormalized {
     data_horario,
     endereco: venueAddr?.rua || venueName || parsedCidade,
     numero: venueAddr?.numero || null,
-    bairro: venueAddr?.bairro || 'Centro',
+    bairro: venueAddr?.bairro || null,
     complemento: venueName ? `(${venueName})` : null,
     cidade: venueAddr?.cidade || parsedCidade,
     estado: venueAddr?.estado || parsedEstado,

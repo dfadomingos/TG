@@ -105,7 +105,7 @@ export function GradeEventos({ termoBusca = '' }: GradeEventosProps) {
     const passaBusca = !termo || 
       evento.titulo.toLowerCase().includes(termo) ||
       evento.endereco.toLowerCase().includes(termo) ||
-      evento.bairro.toLowerCase().includes(termo);
+      (evento.bairro?.toLowerCase() || "").includes(termo);
     
     return passaCategoria && passaBusca;
   });

@@ -27,8 +27,7 @@ export function CardEvento({ id, titulo, data, endereco, bairro, imagem, hora, p
   const { isLoggedIn } = useAuth();
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
-  // Compõe o local de exibição a partir de endereço + bairro
-  const localExibicao = `${endereco}, ${bairro}`;
+  const localExibicao = bairro ? `${endereco}, ${bairro}` : endereco;
 
   const handleFavoriteClick = () => {
     if (!isLoggedIn) {

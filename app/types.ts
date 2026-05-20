@@ -59,9 +59,9 @@ export interface Evento {
   views: number;
   // endereço
   endereco: string;
-  numero?: string;
-  bairro: string;
-  complemento?: string;
+  numero?: string | null;
+  bairro?: string | null;
+  complemento?: string | null;
   cidade: string;
   estado: string;
   cep?: string;

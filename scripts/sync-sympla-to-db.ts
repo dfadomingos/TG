@@ -58,8 +58,9 @@ async function downloadImage(url: string | null): Promise<string | null> {
   }
 }
 
+let geminiQuotaExceeded = false;
+
 async function resumirComIA(descricao: string, titulo: string): Promise<string> {
-  // Se a descrição for genérica e curta, usaremos a IA para gerar uma introdução atraente baseada no título
   const prompt = `Você é um curador de um guia cultural de eventos de Franca-SP. 
 Crie uma descrição atrativa, animada e direta ao ponto para o seguinte evento: '${titulo}'.
 Você tem poucas informações sobre ele (Descrição original: "${descricao}"), então use a criatividade sem inventar dados críticos.
@@ -69,8 +70,7 @@ REGRA CRÍTICA: Retorne APENAS o texto da descrição do evento. NÃO adicione i
 
 Resumo:`;
 
-  // Tenta Gemini com retry em caso de Rate Limit (429)
-  if (process.env.GEMINI_API_KEY) {
+  if (process.env.GEMINI_API_KEY && !geminiQuotaExceeded) {
     const maxRetries = 3;
     let delay = 2000;
 
@@ -89,13 +89,17 @@ Resumo:`;
           break;
         } else if (res.status === 429) {
           const errorData = await res.json().catch(() => ({}));
+          const errorMsg = errorData.error?.message || '';
+          if (errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('exceeded') || errorMsg.toLowerCase().includes('limit')) {
+            console.warn(`   ⚠️ Gemini Quota Excedida! Desabilitando chamadas subsequentes nesta execução.`);
+            geminiQuotaExceeded = true;
+            break;
+          }
           const retryDelaySecs = errorData.error?.details?.find((d: any) => d['@type']?.includes('RetryInfo'))?.retryDelay;
           let waitTime = delay;
           if (retryDelaySecs) {
             const parsedSecs = parseInt(retryDelaySecs.replace('s', ''), 10);
-            if (!isNaN(parsedSecs)) {
-              waitTime = (parsedSecs + 1) * 1000;
-            }
+            if (!isNaN(parsedSecs)) waitTime = (parsedSecs + 1) * 1000;
           }
           console.warn(`   ⚠️ Gemini Rate Limit (429) na tentativa ${attempt}/${maxRetries}. Aguardando ${waitTime / 1000}s...`);
           await new Promise((r) => setTimeout(r, waitTime));
@@ -161,28 +165,49 @@ async function main() {
       
       if (!normalized.data_horario) continue;
 
-      // 3.1. Baixar a imagem (se disponível)
-      const localImagePath = await downloadImage(normalized.imagem);
-      const finalImagePath = localImagePath || normalized.imagem || '';
-
-      // 3.2. Formatar descrição com IA
-      let descricaoFormatada = normalized.descricao;
-      if (process.env.GEMINI_API_KEY) {
-         descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
-      }
-
-      // Verifica se o evento já existe
+      // 3.1. Verifica se o evento já existe
       const existingEvent = await prisma.evento.findFirst({
         where: {
           OR: [
             { link_compra: normalized.link_compra },
-            { 
-              titulo: normalized.titulo,
-              data_horario: normalized.data_horario
-            }
+            { titulo: normalized.titulo, data_horario: normalized.data_horario }
           ]
         }
       });
+
+      let finalImagePath = '';
+      let descricaoFormatada = '';
+      let chamouIA = false;
+
+      if (existingEvent) {
+        // Reaproveita dados existentes para poupar chamadas de API e downloads
+        finalImagePath = existingEvent.imagem;
+        descricaoFormatada = existingEvent.descricao;
+
+        const precisaBaixarImagem = !finalImagePath || !finalImagePath.startsWith('/uploads/');
+        const precisaIA = !descricaoFormatada || descricaoFormatada.length < 50 || descricaoFormatada.includes('Mais informações no site oficial');
+
+        if (precisaBaixarImagem) {
+          const localImagePath = await downloadImage(normalized.imagem);
+          finalImagePath = localImagePath || normalized.imagem || '';
+        }
+        if (precisaIA && process.env.GEMINI_API_KEY) {
+          console.log(`      🤖 [IA] Gerando descrição para evento atualizado: "${normalized.titulo}"`);
+          descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
+          chamouIA = true;
+        }
+      } else {
+        // Evento novo: executa download e IA completos
+        const localImagePath = await downloadImage(normalized.imagem);
+        finalImagePath = localImagePath || normalized.imagem || '';
+
+        descricaoFormatada = normalized.descricao;
+        if (process.env.GEMINI_API_KEY) {
+          console.log(`      🤖 [IA] Gerando descrição para novo evento: "${normalized.titulo}"`);
+          descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
+          chamouIA = true;
+        }
+      }
 
       const eventData = {
         titulo: normalized.titulo,
@@ -204,22 +229,21 @@ async function main() {
       };
 
       if (existingEvent) {
-        await prisma.evento.update({
-          where: { id: existingEvent.id },
-          data: eventData,
-        });
+        await prisma.evento.update({ where: { id: existingEvent.id }, data: eventData });
         atualizados++;
         console.log(`   ♻️  Atualizado: "${normalized.titulo}"`);
       } else {
-        await prisma.evento.create({
-          data: eventData,
-        });
+        await prisma.evento.create({ data: eventData });
         criados++;
         console.log(`   ✨ Criado: "${normalized.titulo}"`);
       }
 
-      // Pequena pausa para evitar estourar limites das APIs externas (Gemini/imagens)
-      await new Promise((r) => setTimeout(r, 2000));
+      // Pausa apenas se chamou IA
+      if (chamouIA) {
+        await new Promise((r) => setTimeout(r, 2000));
+      } else {
+        await new Promise((r) => setTimeout(r, 100));
+      }
     }
 
     console.log('\n' + '━'.repeat(60));

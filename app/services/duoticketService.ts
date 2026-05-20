@@ -44,7 +44,7 @@ export interface DuoTicketEventNormalized {
   data_horario: Date | null;
   endereco: string;
   numero: string | null;
-  bairro: string;
+  bairro: string | null;
   complemento: string | null;
   cidade: string;
   estado: string;
@@ -67,7 +67,7 @@ const USER_AGENT =
 interface VenueAddress {
   rua: string;
   numero: string;
-  bairro: string;
+  bairro: string | null;
   cidade: string;
   estado: string;
   cep: string;
@@ -538,7 +538,7 @@ export function normalizeDuoTicketEvent(raw: DuoTicketEventRaw): DuoTicketEventN
   // Endereço — resolve via lookup table
   let endereco = 'Em breve';
   let numero: string | null = null;
-  let bairro = 'Centro';
+  let bairro: string | null = null;
   let cidade = raw.cidade || 'Franca';
   let estado = raw.estado || 'SP';
   let cep: string | null = null;
