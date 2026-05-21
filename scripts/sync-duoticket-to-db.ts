@@ -9,6 +9,7 @@ import { PrismaClient, CategoriaEvento, EventStatus } from '@prisma/client';
 import { 
   getDuoTicketEvents, 
   getDuoTicketEventDetail,
+  enrichDuoTicketEventsWithPuppeteer,
   normalizeDuoTicketEvent
 } from '../app/services/duoticketService';
 import fs from 'fs';
@@ -217,6 +218,9 @@ async function main() {
       // Pequeno delay para não sobrecarregar o servidor
       await new Promise((r) => setTimeout(r, 500));
     }
+
+    // 3.5. Enriquecer com endereços reais via Puppeteer (widget de mapa)
+    await enrichDuoTicketEventsWithPuppeteer(rawEvents);
 
     // 4. Normalizar e salvar no banco
     console.log(`\n💾 Sincronizando ${rawEvents.length} eventos...`);

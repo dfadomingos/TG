@@ -71,7 +71,7 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
           imagem={evento.imagem}
           categoria={evento.categoria as any}
           endereco={evento.endereco}
-          bairro={evento.bairro}
+          bairro={evento.bairro || ""}
           data={formatarData(evento.data_horario)}
         />
 

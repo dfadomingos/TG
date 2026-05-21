@@ -22,6 +22,7 @@
  */
 
 import * as cheerio from 'cheerio';
+import puppeteer from 'puppeteer';
 
 // ─── Tipos ──────────────────────────────────────────────────────────
 
@@ -35,6 +36,15 @@ export interface DuoTicketEventRaw {
   link: string;
   imagemUrl: string;
   descricao?: string;
+  /** Endereço extraído do widget de mapa via Puppeteer */
+  endereco_mapa?: {
+    venue: string;
+    rua: string;
+    numero: string;
+    bairro: string;
+    cidade: string;
+    estado: string;
+  } | null;
 }
 
 /** Evento normalizado para integração com Prisma */
@@ -138,7 +148,86 @@ const VENUES_ADDRESSES: Record<string, VenueAddress> = {
     estado: 'SP',
     cep: '14400-490',
   },
-  // Mais locais podem ser adicionados conforme aparecem
+  'barracao': {
+    rua: 'Avenida Presidente Vargas',
+    numero: '2210',
+    bairro: 'Recanto Itambé',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14402-000',
+  },
+  'santorini': {
+    rua: 'Avenida Dr. Hélio Palermo',
+    numero: '2023',
+    bairro: 'Vila Totoli',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14409-005',
+  },
+  'planeta malte': {
+    rua: 'Avenida São Vicente',
+    numero: '5170',
+    bairro: 'Chácara do Espraiado',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-830',
+  },
+  'jd. secreto': {
+    rua: 'Rua Jerônimo Rodrigues Pinto',
+    numero: '690',
+    bairro: 'Parque dos Lima',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-467',
+  },
+  'viola mix': {
+    rua: 'Rua Rio Trombetas',
+    numero: '901',
+    bairro: 'Residencial Amazonas',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14406-031',
+  },
+  'polo boi santo': {
+    rua: 'Rodovia Nestor Ferreira',
+    numero: 'KM 6',
+    bairro: 'Rural',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14400-000',
+  },
+  'rooftop paulo vi': {
+    rua: 'Avenida Paulo VI',
+    numero: '600',
+    bairro: 'Residencial Paraíso',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-145',
+  },
+  'posto galo branco': {
+    rua: 'Avenida Antônio Barbosa Filho',
+    numero: '101',
+    bairro: 'Jardim Pedreiras',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14405-000',
+  },
+  'boteco da villa': {
+    rua: 'Avenida São Vicente',
+    numero: '4265',
+    bairro: 'Jardim Noemia',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-720',
+  },
+  'av. sao vicente 4265': {
+    rua: 'Avenida São Vicente',
+    numero: '4265',
+    bairro: 'Jardim Noemia',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-720',
+  }
 };
 
 /**
@@ -468,6 +557,185 @@ export async function getDuoTicketEventDetail(eventUrl: string): Promise<{
   }
 }
 
+// ─── Extração de Endereço via Puppeteer (Mapa) ──────────────────────
+
+/**
+ * Parseia a string de endereço do widget de mapa do DuoTicket.
+ * Formato esperado: "Venue Name | Rua Xxx, 123 - Bairro, Cidade - UF"
+ * Variações: pode não ter número, pode não ter bairro.
+ */
+function parseMapAddress(raw: string): {
+  venue: string;
+  rua: string;
+  numero: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+} | null {
+  if (!raw || raw.length < 5) return null;
+
+  // Separa venue do endereço pelo pipe
+  const pipeIdx = raw.indexOf('|');
+  if (pipeIdx === -1) return null;
+
+  const venue = raw.substring(0, pipeIdx).trim();
+  let rest = raw.substring(pipeIdx + 1).trim();
+  // Remove trailing comma/spaces
+  rest = rest.replace(/[,\s]+$/, '');
+
+  if (!rest || rest.length < 3) return null;
+
+  // Helper: extrair rua e número de uma string como "Av. São Vicente 4265" ou "Rua Xxx, 1050"
+  function extractStreetAndNumber(s: string): { rua: string; numero: string } {
+    // "Rua Xxx, 1050"
+    const m1 = s.match(/^(.+?),\s*(\d+[A-Za-z]?)\s*$/);
+    if (m1) return { rua: m1[1].trim(), numero: m1[2].trim() };
+    // "Av. São Vicente 4265"
+    const m2 = s.match(/^(.+?)\s+(\d+[A-Za-z]?)\s*$/);
+    if (m2 && m2[2].length <= 6) return { rua: m2[1].trim(), numero: m2[2].trim() };
+    // Sem número
+    return { rua: s.trim(), numero: '' };
+  }
+
+  // Split by " - " to get parts
+  const dashParts = rest.split(/\s*-\s*/);
+
+  let rua = '';
+  let numero = '';
+  let bairro = '';
+  let cidade = 'Franca';
+  let estado = 'SP';
+
+  if (dashParts.length >= 3) {
+    // Format: "street, num - bairro, cidade - UF"
+    // e.g. "R. Dr. Pedro de Tolêdo, 1050 - Parque Universitario, Franca - SP"
+    const extracted = extractStreetAndNumber(dashParts[0].trim());
+    rua = extracted.rua;
+    numero = extracted.numero;
+
+    const middlePart = dashParts[1].trim();
+    const lastPart = dashParts.slice(2).join('-').trim().replace(/[,\s]+$/, '');
+
+    const commaIdx = middlePart.lastIndexOf(',');
+    if (commaIdx !== -1) {
+      bairro = middlePart.substring(0, commaIdx).trim();
+      cidade = middlePart.substring(commaIdx + 1).trim() || 'Franca';
+    } else {
+      bairro = middlePart;
+    }
+
+    if (lastPart && lastPart.length <= 4) {
+      estado = lastPart.replace(/[^A-Za-z]/g, '').trim() || 'SP';
+    }
+  } else if (dashParts.length === 2) {
+    // Format: "street, num - bairro/cidade"
+    const extracted = extractStreetAndNumber(dashParts[0].trim());
+    rua = extracted.rua;
+    numero = extracted.numero;
+    const secondPart = dashParts[1].trim();
+    // Could be city or bairro
+    if (secondPart.length <= 20) {
+      bairro = secondPart;
+    } else {
+      cidade = secondPart;
+    }
+  } else {
+    // No dash at all: "Av. São Vicente 4265" or "Rodovia X, KM 6, Zona Rural, Restinga"
+    // Try comma-separated parts for rural addresses
+    const commaParts = rest.split(',').map(p => p.trim());
+    if (commaParts.length >= 3) {
+      // Rural format: "Rodovia Nestor Ferreira, KM 6+ 600 metros, Zona Rural, Restinga"
+      rua = commaParts[0];
+      numero = commaParts[1]; // e.g. "KM 6+ 600 metros"
+      // Try to find city in remaining parts
+      for (let i = 2; i < commaParts.length; i++) {
+        const part = commaParts[i].trim();
+        if (part.toLowerCase().includes('zona') || part.toLowerCase().includes('rural')) {
+          bairro = part;
+        } else if (part.length > 2) {
+          cidade = part;
+        }
+      }
+    } else {
+      // Simple: "Av. São Vicente 4265"
+      const extracted = extractStreetAndNumber(rest);
+      rua = extracted.rua;
+      numero = extracted.numero;
+    }
+  }
+
+  // Cleanup: remove "END." prefix, trailing/leading whitespace
+  rua = rua.replace(/^END\.?\s*/i, '').trim();
+  // Remove trailing comma from city
+  cidade = cidade.replace(/[,\s]+$/, '').trim() || 'Franca';
+
+  return { venue, rua, numero, bairro, cidade, estado };
+}
+
+/**
+ * Usa Puppeteer para extrair endereços reais do widget de mapa do DuoTicket.
+ * Abre um único browser e navega em cada página, extraindo o conteúdo de .loading-mapa.
+ *
+ * @param events - Array de eventos brutos (será mutado com endereco_mapa)
+ */
+export async function enrichDuoTicketEventsWithPuppeteer(
+  events: DuoTicketEventRaw[]
+): Promise<void> {
+  console.log(`\n🗺️  Extraindo endereços via Puppeteer (mapa) para ${events.length} evento(s)...`);
+  const browser = await puppeteer.launch({ headless: true });
+  try {
+    for (let i = 0; i < events.length; i++) {
+      const raw = events[i];
+      const page = await browser.newPage();
+
+      try {
+        await page.goto(raw.link, { waitUntil: 'networkidle2', timeout: 30000 });
+
+        const mapText = await page.evaluate(() => {
+          const mapDiv = document.querySelector('.loading-mapa');
+          if (!mapDiv) return null;
+          // Get only the address line, which is after the links section
+          const text = mapDiv.textContent?.replace(/\s+/g, ' ').trim() || '';
+          // The address line is after "Abrir Maps" text
+          const mapsIdx = text.indexOf('Abrir Maps');
+          if (mapsIdx !== -1) {
+            return text.substring(mapsIdx + 'Abrir Maps'.length).trim();
+          }
+          // Fallback: look for pipe separator
+          const pipeIdx = text.indexOf('|');
+          if (pipeIdx !== -1) {
+            // Get some context before the pipe too
+            const beforePipe = text.substring(Math.max(0, pipeIdx - 80), pipeIdx).trim();
+            const lastSpace = beforePipe.lastIndexOf(' ');
+            const venuePart = lastSpace !== -1 ? beforePipe.substring(lastSpace + 1) : beforePipe;
+            return text.substring(pipeIdx - venuePart.length).trim();
+          }
+          return null;
+        });
+
+        if (mapText) {
+          const parsed = parseMapAddress(mapText);
+          if (parsed) {
+            raw.endereco_mapa = parsed;
+            console.log(`   🗺️  [${i + 1}/${events.length}] ${raw.titulo}: ${parsed.rua}, ${parsed.numero} - ${parsed.bairro}, ${parsed.cidade}`);
+          } else {
+            console.log(`   ⚠️  [${i + 1}/${events.length}] ${raw.titulo}: mapa encontrado mas não parseado: "${mapText.substring(0, 80)}"`);
+          }
+        } else {
+          console.log(`   ℹ️  [${i + 1}/${events.length}] ${raw.titulo}: sem mapa (local a definir)`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`   ⚠️  [${i + 1}/${events.length}] ${raw.titulo}: erro Puppeteer — ${msg}`);
+      } finally {
+        await page.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
 // ─── Extração de Horário da Descrição ───────────────────────────────
 
 /**
@@ -535,7 +803,7 @@ export function normalizeDuoTicketEvent(raw: DuoTicketEventRaw): DuoTicketEventN
 
   const categoria = inferirCategoria(raw.titulo);
 
-  // Endereço — resolve via lookup table
+  // Endereço — prioriza dados do mapa (Puppeteer), fallback para lookup table
   let endereco = 'Em breve';
   let numero: string | null = null;
   let bairro: string | null = null;
@@ -544,7 +812,22 @@ export function normalizeDuoTicketEvent(raw: DuoTicketEventRaw): DuoTicketEventN
   let cep: string | null = null;
   let complemento: string | null = null;
 
-  if (raw.local_nome) {
+  if (raw.endereco_mapa) {
+    // Dados reais do widget de mapa
+    endereco = raw.endereco_mapa.rua;
+    numero = raw.endereco_mapa.numero || null;
+    bairro = raw.endereco_mapa.bairro || null;
+    cidade = raw.endereco_mapa.cidade || cidade;
+    estado = raw.endereco_mapa.estado || estado;
+    complemento = raw.endereco_mapa.venue ? `(${raw.endereco_mapa.venue})` : null;
+
+    // Tenta enriquecer com CEP do lookup se disponível
+    if (raw.endereco_mapa.venue) {
+      const addr = resolveVenueAddress(raw.endereco_mapa.venue);
+      if (addr?.cep) cep = addr.cep;
+    }
+  } else if (raw.local_nome) {
+    // Fallback: resolve via lookup table estático
     const addr = resolveVenueAddress(raw.local_nome);
     if (addr) {
       endereco = addr.rua;
