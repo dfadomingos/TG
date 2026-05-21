@@ -238,7 +238,10 @@ async function main() {
           OR: [
             { link_compra: normalized.link_compra },
             { 
-              titulo: normalized.titulo,
+              titulo: {
+                equals: normalized.titulo,
+                mode: 'insensitive'
+              },
               data_horario: normalized.data_horario
             }
           ]
