@@ -125,17 +125,17 @@ Resumo:`;
     }
   }
 
-  // Tenta OpenAI
-  if (process.env.OPENAI_API_KEY) {
+  // Tenta Groq (fallback gratuito)
+  if (process.env.GROQ_API_KEY) {
     try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
+          model: 'llama-3.1-8b-instant',
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 300,
           temperature: 0.7
@@ -147,7 +147,7 @@ Resumo:`;
         if (textoGerado) return textoGerado.trim();
       }
     } catch (e) {
-      console.warn("   ⚠️ Erro ao acessar IA da OpenAI.");
+      console.warn("   ⚠️ Erro ao acessar IA da Groq.");
     }
   }
 
@@ -162,7 +162,7 @@ async function main() {
   console.log('━'.repeat(60));
   
   console.log('🔑 Gemini API Key:', process.env.GEMINI_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
-  console.log('🔑 OpenAI API Key:', process.env.OPENAI_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
+  console.log('🔑 Groq API Key:', process.env.GROQ_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
 
   try {
     // 1. Garantir que o organizador "Q2 Ingressos" existe
@@ -207,13 +207,19 @@ async function main() {
       
       if (!normalized.data_horario) continue;
 
+      // Filtra eventos de teste da plataforma Q2
+      if (normalized.titulo.trim().toLowerCase().startsWith('teste')) {
+        console.log(`   🚫 Ignorado (evento de teste): "${normalized.titulo}"`);
+        continue;
+      }
+
       // 3.1. Baixar a imagem (se disponível)
       const localImagePath = await downloadImage(normalized.imagem);
       const finalImagePath = localImagePath || normalized.imagem || '';
 
       // 3.2. Formatar descrição com IA
       let descricaoFormatada = normalized.descricao;
-      if (process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY) {
+      if (process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY) {
          descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
       }
 

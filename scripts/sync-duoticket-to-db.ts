@@ -64,7 +64,7 @@ async function downloadImage(url: string | null): Promise<string | null> {
 }
 
 let geminiQuotaExceeded = false;
-let openaiQuotaExceeded = false;
+let groqQuotaExceeded = false;
 
 async function resumirComIA(descricao: string, titulo: string): Promise<string> {
   // Se a descrição for genérica e curta, usaremos a IA para gerar uma introdução atraente baseada no título
@@ -132,17 +132,17 @@ Resumo:`;
     }
   }
 
-  // Tenta OpenAI se Gemini falhou ou está sem cota
-  if (process.env.OPENAI_API_KEY && !openaiQuotaExceeded) {
+  // Tenta Groq se Gemini falhou ou está sem cota
+  if (process.env.GROQ_API_KEY && !groqQuotaExceeded) {
     try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
+          model: 'llama-3.1-8b-instant',
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 300,
           temperature: 0.7
@@ -156,12 +156,12 @@ Resumo:`;
         const errorData = await res.json().catch(() => ({}));
         const errorMsg = errorData.error?.message || '';
         if (errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('exceeded') || errorMsg.toLowerCase().includes('billing')) {
-          console.warn(`   ⚠️ OpenAI Quota/Billing Excedido! Desabilitando chamadas subsequentes à OpenAI nesta execução.`);
-          openaiQuotaExceeded = true;
+          console.warn(`   ⚠️ Groq Quota/Billing Excedido! Desabilitando chamadas subsequentes à Groq nesta execução.`);
+          groqQuotaExceeded = true;
         }
       }
     } catch (e) {
-      console.warn("   ⚠️ Erro ao acessar IA da OpenAI.");
+      console.warn("   ⚠️ Erro ao acessar IA da Groq.");
     }
   }
 
@@ -176,7 +176,7 @@ async function main() {
   console.log('━'.repeat(60));
   
   console.log('🔑 Gemini API Key:', process.env.GEMINI_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
-  console.log('🔑 OpenAI API Key:', process.env.OPENAI_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
+  console.log('🔑 Groq API Key:', process.env.GROQ_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
 
   try {
     // 1. Garantir que o organizador "DuoTicket" existe
@@ -267,7 +267,7 @@ async function main() {
           finalImagePath = localImagePath || normalized.imagem || '';
         }
 
-        if (precisaIA && (process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY)) {
+        if (precisaIA && (process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY)) {
           console.log(`      🤖 [IA] Gerando descrição para evento atualizado: "${normalized.titulo}"`);
           descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
           chamouIA = true;
@@ -278,7 +278,7 @@ async function main() {
         finalImagePath = localImagePath || normalized.imagem || '';
 
         descricaoFormatada = normalized.descricao;
-        if (process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY) {
+        if (process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY) {
           console.log(`      🤖 [IA] Gerando descrição para novo evento: "${normalized.titulo}"`);
           descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
           chamouIA = true;
