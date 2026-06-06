@@ -215,6 +215,39 @@ function inferirCategoria(titulo: string): string {
   return 'Outros';
 }
 
+// ─── Listas de Exclusão ───────────────────────────────────────────────
+const CIDADES_EXCLUIDAS = [
+  'ribeirão preto', 'ribeirao preto', 'ribeiraopreto',
+  'são paulo', 'sao paulo', 'saopaulo',
+  'campinas', 'uberlândia', 'uberaba', 'belo horizonte',
+  'bauru', 'araraquara', 'são carlos', 'sao carlos',
+  'presidente prudente', 'marília', 'marilia',
+  'são josé do rio preto', 'sao jose do rio preto',
+  'piracicaba', 'sorocaba', 'jundiaí', 'jundiai',
+  'santos', 'guarulhos', 'osasco', 'curitiba',
+  'goiânia', 'goiania', 'rio de janeiro',
+  'patrocínio paulista', 'patrocinio paulista',
+  'batatais', 'jardinópolis', 'jardinopolis',
+  'orlândia', 'orlandia', 'ituverava',
+  'restinga', 'cristais paulista',
+  'são joaquim da barra', 'sao joaquim da barra',
+  'canastra',
+];
+
+const LOCAIS_FORA_FRANCA = [
+  'teatro santarosa',
+  'teatro municipal de ribeirão preto',
+  'teatro pedro ii',
+  'theatro pedro ii',
+  'arena eurobike',
+  'espaço vinil ribeirão',
+  'opera house ribeirão',
+  'sesc ribeirão',
+  'sesc araraquara',
+  'sesc bauru',
+  'sesc são carlos',
+];
+
 // ─── Extração via Puppeteer ─────────────────────────────────────────
 
 export async function getSymplaEventsPuppeteer(city: string = 'franca'): Promise<SymplaEventRaw[]> {
@@ -274,12 +307,59 @@ export async function getSymplaEventsPuppeteer(city: string = 'franca'): Promise
       return events;
     });
 
-    // Passo Adicional Opcional: Entrar nas páginas para capturar a descrição completa
-    // Por eficiência e para evitar bloqueios, usaremos o Gemini para criar a descrição 
-    // a partir do título caso não façamos a navegação profunda.
-    // Vamos apenas retornar os raws.
+    const validEvents: SymplaEventRaw[] = [];
+
+    // Verificação de Local (Híbrida)
+    for (const raw of rawEvents) {
+      const localLower = (raw.local_nome || '').toLowerCase();
+      const tituloLower = (raw.titulo || '').toLowerCase();
+      
+      // 1. Verifica se a cidade ou local está na blacklist
+      const isBlacklistedCity = CIDADES_EXCLUIDAS.some(c => localLower.includes(c) || tituloLower.includes(c));
+      const isBlacklistedVenue = LOCAIS_FORA_FRANCA.some(l => localLower.includes(l));
+      
+      if (isBlacklistedCity || isBlacklistedVenue) {
+        console.log(`   🚫 [Sympla] Ignorado (Blacklist): "${raw.titulo}" — Local: "${raw.local_nome}"`);
+        continue;
+      }
+
+      // 2. Verifica se o local está na whitelist (Franca)
+      const addr = resolveVenueAddress(raw.local_nome);
+      if (addr && addr.cidade.toLowerCase() === 'franca') {
+        validEvents.push(raw);
+        continue;
+      }
+      
+      // 3. Local Desconhecido / Ambíguo - Entra na página para checar o endereço
+      console.log(`   🔍 [Sympla] Verificando local desconhecido: "${raw.local_nome}" para o evento "${raw.titulo}"...`);
+      try {
+        const eventPage = await browser.newPage();
+        await eventPage.goto(raw.link, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        
+        // Extrai o texto da página para checar o endereço
+        const pageText = await eventPage.evaluate(() => document.body.innerText.toLowerCase());
+        await eventPage.close();
+        
+        const isFromAnotherCity = CIDADES_EXCLUIDAS.some(c => pageText.includes(c));
+        
+        if (isFromAnotherCity) {
+           console.log(`   🚫 [Sympla] Confirmado como OUTRA CIDADE após visita: "${raw.titulo}"`);
+           continue;
+        } else {
+           console.log(`   ✅ [Sympla] Local aprovado: "${raw.local_nome}"`);
+           validEvents.push(raw);
+        }
+        
+        // Pausa de 1.5s para evitar bloqueios do Sympla
+        await new Promise(r => setTimeout(r, 1500));
+        
+      } catch (err) {
+        console.log(`   ⚠️ [Sympla] Erro ao verificar detalhes do evento: ${raw.link} - Mantendo evento por precaução.`);
+        validEvents.push(raw); // Em caso de erro de timeout, mantemos
+      }
+    }
     
-    return rawEvents;
+    return validEvents;
   } catch (error) {
     console.error("Erro ao extrair via Puppeteer no Sympla:", error);
     return [];

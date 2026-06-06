@@ -165,6 +165,8 @@ async function main() {
       
       if (!normalized.data_horario) continue;
 
+
+
       // 3.1. Verifica se o evento já existe
       const existingEvent = await prisma.evento.findFirst({
         where: {
