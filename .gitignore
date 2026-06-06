@@ -46,3 +46,7 @@ prompts/
 
 /eventos_franca/DOCUMENTACAO_EXTRACAO.md
 scratch/
+
+# local script automation
+/scripts/run-sync.bat
+

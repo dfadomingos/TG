@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "sync": "npx tsx scripts/sync-all.ts",
+    "sync:q2": "npx tsx scripts/sync-q2-to-db.ts",
+    "sync:sympla": "npx tsx scripts/sync-sympla-to-db.ts",
+    "sync:duoticket": "npx tsx scripts/sync-duoticket-to-db.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
