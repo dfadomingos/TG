@@ -1,4 +1,7 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+
+puppeteer.use(StealthPlugin());
 
 // ─── Tipos ──────────────────────────────────────────────────────────
 
@@ -9,6 +12,7 @@ export interface SymplaEventRaw {
   link: string;
   imagemUrl: string;
   descricao?: string;
+  endereco_extraido?: string;
 }
 
 export interface SymplaEventNormalized {
@@ -309,7 +313,7 @@ export async function getSymplaEventsPuppeteer(city: string = 'franca'): Promise
 
     const validEvents: SymplaEventRaw[] = [];
 
-    // Verificação de Local (Híbrida)
+    // Verificação de Local e Extração de Endereço
     for (const raw of rawEvents) {
       const localLower = (raw.local_nome || '').toLowerCase();
       const tituloLower = (raw.titulo || '').toLowerCase();
@@ -323,30 +327,43 @@ export async function getSymplaEventsPuppeteer(city: string = 'franca'): Promise
         continue;
       }
 
-      // 2. Verifica se o local está na whitelist (Franca)
-      const addr = resolveVenueAddress(raw.local_nome);
-      if (addr && addr.cidade.toLowerCase() === 'franca') {
-        validEvents.push(raw);
-        continue;
-      }
-      
-      // 3. Local Desconhecido / Ambíguo - Entra na página para checar o endereço
-      console.log(`   🔍 [Sympla] Verificando local desconhecido: "${raw.local_nome}" para o evento "${raw.titulo}"...`);
+      console.log(`   🔍 [Sympla] Acessando evento para extrair endereço: "${raw.titulo}"...`);
       try {
         const eventPage = await browser.newPage();
         await eventPage.goto(raw.link, { waitUntil: 'domcontentloaded', timeout: 15000 });
         
-        // Extrai o texto da página para checar o endereço
-        const pageText = await eventPage.evaluate(() => document.body.innerText.toLowerCase());
+        // Extrai o texto da página para checar o endereço e tenta encontrar a aba "Local"
+        const addressData = await eventPage.evaluate(() => {
+          const bodyText = document.body.innerText.toLowerCase();
+          
+          let address = '';
+          const allElements = Array.from(document.querySelectorAll('*'));
+          for (let i = 0; i < allElements.length; i++) {
+            const el = allElements[i] as HTMLElement;
+            if (el.innerText && el.innerText.trim() === 'Local' && el.tagName.match(/H\\d|SPAN|DIV|STRONG/)) {
+               if (el.parentElement && el.parentElement.innerText.length > 10) {
+                 address = el.parentElement.innerText;
+                 break;
+               }
+            }
+          }
+          return { pageText: bodyText, addressText: address };
+        });
         await eventPage.close();
         
-        const isFromAnotherCity = CIDADES_EXCLUIDAS.some(c => pageText.includes(c));
+        const isFromAnotherCity = CIDADES_EXCLUIDAS.some(c => addressData.pageText.includes(c));
         
-        if (isFromAnotherCity) {
+        // Se a whitelist (VENUES_ADDRESSES) disser que é de Franca, a gente aprova de qualquer forma, 
+        // mas ganha o address extraído.
+        const addr = resolveVenueAddress(raw.local_nome);
+        const forceWhitelist = addr && addr.cidade.toLowerCase() === 'franca';
+
+        if (isFromAnotherCity && !forceWhitelist) {
            console.log(`   🚫 [Sympla] Confirmado como OUTRA CIDADE após visita: "${raw.titulo}"`);
            continue;
         } else {
-           console.log(`   ✅ [Sympla] Local aprovado: "${raw.local_nome}"`);
+           console.log(`   ✅ [Sympla] Evento aprovado: "${raw.local_nome}"`);
+           raw.endereco_extraido = addressData.addressText;
            validEvents.push(raw);
         }
         
@@ -355,7 +372,8 @@ export async function getSymplaEventsPuppeteer(city: string = 'franca'): Promise
         
       } catch (err) {
         console.log(`   ⚠️ [Sympla] Erro ao verificar detalhes do evento: ${raw.link} - Mantendo evento por precaução.`);
-        validEvents.push(raw); // Em caso de erro de timeout, mantemos
+        // Em caso de erro de timeout, mantemos
+        validEvents.push(raw); 
       }
     }
     
@@ -378,22 +396,57 @@ export function normalizeSymplaEvent(raw: SymplaEventRaw): SymplaEventNormalized
   let endereco = 'Em breve';
   let numero = null;
   let bairro: string | null = null;
+  let complemento: string | null = null;
   let cidade = 'Franca';
   let estado = 'SP';
   let cep = null;
 
-  const addr = resolveVenueAddress(raw.local_nome);
-  if (addr) {
-    endereco = addr.rua;
-    numero = addr.numero;
-    bairro = addr.bairro;
-    cidade = addr.cidade;
-    estado = addr.estado;
-    cep = addr.cep;
-  } else if (raw.local_nome && raw.local_nome.length > 3) {
-    // Tenta usar o nome do local como endereço genérico se não achou no map
-    const partes = raw.local_nome.split('-');
-    endereco = partes[0].trim();
+  let enderecoPreenchidoPelaExtracao = false;
+
+  if (raw.endereco_extraido) {
+    // Filtra as linhas para evitar lixo
+    const lines = raw.endereco_extraido.split('\\n').map(l => l.trim()).filter(l => l && l.toLowerCase() !== 'local' && l.toLowerCase() !== 'ver mapa');
+    
+    if (lines.length > 0) {
+      // Pega a linha mais longa que tenha vírgulas, pois ela costuma ser a mais detalhada
+      // ex: "Avenida São Vicente, 5811, Pádua Faria Hall, Jardim Noemia"
+      let targetLine = lines[0];
+      for (const line of lines) {
+         if (line.split(',').length > targetLine.split(',').length) {
+           targetLine = line;
+         }
+      }
+      
+      const parts = targetLine.split(',').map(p => p.trim());
+      if (parts.length >= 1) endereco = parts[0];
+      if (parts.length >= 2) numero = parts[1];
+      if (parts.length >= 3) {
+        if (parts.length >= 4) {
+           complemento = parts[2];
+           bairro = parts[3];
+        } else {
+           // Se tiver 3 partes, a última pode ser o bairro ou o complemento
+           bairro = parts[2];
+        }
+      }
+      enderecoPreenchidoPelaExtracao = true;
+    }
+  }
+
+  // Fallback para a tabela local caso a extração falhe ou venha vazia
+  if (!enderecoPreenchidoPelaExtracao) {
+    const addr = resolveVenueAddress(raw.local_nome);
+    if (addr) {
+      endereco = addr.rua;
+      numero = addr.numero;
+      bairro = addr.bairro;
+      cidade = addr.cidade;
+      estado = addr.estado;
+      cep = addr.cep;
+    } else if (raw.local_nome && raw.local_nome.length > 3) {
+      const partes = raw.local_nome.split('-');
+      endereco = partes[0].trim();
+    }
   }
 
   // Preço - O Sympla não lista preço no card da vitrine geralmente, então setamos -1 para "Ver ingressos"
@@ -406,7 +459,7 @@ export function normalizeSymplaEvent(raw: SymplaEventRaw): SymplaEventNormalized
     endereco,
     numero,
     bairro,
-    complemento: null,
+    complemento,
     cidade,
     estado,
     cep,

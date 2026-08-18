@@ -144,11 +144,16 @@ async function main() {
         aceitou_termos: true,
       },
     });
-    console.log(`   ✅ Organizador ID: ${organizer.id}`);
+    console.log('   ✅ Organizador ID:', organizer.id);
 
-    // 2. Extrair eventos
+    // Desconecta o Prisma durante o longo scraping para evitar timeout no pool de conexões do Supabase
+    await prisma.$disconnect();
+
     console.log('\n🚀 Extraindo eventos do Sympla...');
     const rawEvents = await getSymplaEventsPuppeteer('Franca');
+
+    // Reconecta o Prisma
+    await prisma.$connect();
 
     if (rawEvents.length === 0) {
       console.log('🛑 Nenhum evento encontrado para sincronizar.');
