@@ -212,6 +212,13 @@ async function main() {
         continue;
       }
 
+      // Ignora eventos que não acontecem em Franca
+      const cidadeNorm = (normalized.cidade || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (cidadeNorm !== 'franca') {
+        console.log(`   🚫 [Sympla] Ignorado (Fora de Franca: ${normalized.cidade}): "${normalized.titulo}"`);
+        continue;
+      }
+
       if (!normalized.data_horario) continue;
       // 3.1. Verifica se o evento já existe
       const existingEvent = await prisma.evento.findFirst({

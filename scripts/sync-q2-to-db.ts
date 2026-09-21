@@ -213,6 +213,13 @@ async function main() {
         continue;
       }
 
+      // Ignora eventos que não acontecem em Franca
+      const cidadeNorm = (normalized.cidade || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (cidadeNorm !== 'franca') {
+        console.log(`   🚫 [Q2] Ignorado (Fora de Franca: ${normalized.cidade}): "${normalized.titulo}"`);
+        continue;
+      }
+
       // 3.1. Baixar a imagem (se disponível)
       const localImagePath = await downloadImage(normalized.imagem);
       const finalImagePath = localImagePath || normalized.imagem || '';
