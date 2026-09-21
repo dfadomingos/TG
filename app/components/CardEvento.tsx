@@ -15,7 +15,9 @@ interface PropsCardEvento {
   titulo: string;
   data: string;
   endereco: string;
-  bairro: string;
+  numero?: string | null;
+  bairro?: string | null;
+  complemento?: string | null;
   imagem: string;
   hora: string;
   preco: string;
@@ -23,11 +25,17 @@ interface PropsCardEvento {
   onToggleFavorite?: (id: string) => void;
 }
 
-export function CardEvento({ id, titulo, data, endereco, bairro, imagem, hora, preco, isFavorite, onToggleFavorite }: PropsCardEvento) {
+export function CardEvento({ id, titulo, data, endereco, numero, bairro, complemento, imagem, hora, preco, isFavorite, onToggleFavorite }: PropsCardEvento) {
   const { isLoggedIn } = useAuth();
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
-  const localExibicao = bairro ? `${endereco}, ${bairro}` : endereco;
+  const nomeLocal = complemento ? complemento.replace(/^\((.*)\)$/, '$1').trim() : '';
+  let localExibicao = endereco;
+  if (nomeLocal && nomeLocal.toLowerCase() !== endereco.toLowerCase()) {
+    localExibicao = `${nomeLocal} - ${endereco}`;
+  } else if (bairro) {
+    localExibicao = `${endereco}, ${bairro}`;
+  }
 
   const handleFavoriteClick = () => {
     if (!isLoggedIn) {

@@ -16,7 +16,9 @@ interface EventoAPI {
   categoria: string;
   data_horario: string;
   endereco: string;
-  bairro: string;
+  numero?: string | null;
+  bairro?: string | null;
+  complemento?: string | null;
   imagem: string;
   preco: number;
 }
@@ -147,7 +149,9 @@ export function GradeEventos({ termoBusca = '' }: GradeEventosProps) {
               titulo={evento.titulo}
               data={formatarData(new Date(evento.data_horario))}
               endereco={evento.endereco}
+              numero={evento.numero}
               bairro={evento.bairro}
+              complemento={evento.complemento}
               imagem={evento.imagem}
               hora={formatarHora(new Date(evento.data_horario))}
               preco={formatarPreco(evento.preco)}

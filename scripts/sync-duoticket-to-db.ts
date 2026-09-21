@@ -142,7 +142,7 @@ Resumo:`;
           'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'llama-3.1-8b-instant',
+          model: 'groq/compound-mini',
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 300,
           temperature: 0.7
@@ -230,6 +230,12 @@ async function main() {
     for (const raw of rawEvents) {
       const normalized = normalizeDuoTicketEvent(raw);
       
+      // Ignora eventos de teste (ex: "Teste Yuno", "TESTE FACIAL", etc)
+      if (normalized.titulo.trim().toLowerCase().startsWith('teste')) {
+        console.log(`   🚫 [DuoTicket] Ignorado (Evento de Teste): "${normalized.titulo}"`);
+        continue;
+      }
+
       if (!normalized.data_horario) continue;
 
       // 4.1. Verifica se o evento já existe (pelo link de compra ou título + data)

@@ -71,7 +71,10 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
           imagem={evento.imagem}
           categoria={evento.categoria as any}
           endereco={evento.endereco}
-          bairro={evento.bairro || ""}
+          numero={evento.numero}
+          bairro={evento.bairro}
+          complemento={evento.complemento}
+          cidade={evento.cidade}
           data={formatarData(evento.data_horario)}
         />
 
@@ -109,6 +112,12 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
             hora={formatarHora(evento.data_horario)}
             preco={formatarPreco(evento.preco)}
             link_compra={evento.link_compra}
+            endereco={evento.endereco}
+            numero={evento.numero}
+            bairro={evento.bairro}
+            complemento={evento.complemento}
+            cidade={evento.cidade}
+            estado={evento.estado}
           />
         </div>
       </main>

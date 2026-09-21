@@ -11,7 +11,7 @@ interface EventoAPI {
   categoria: string;
   data_horario: string;
   endereco: string;
-  bairro: string;
+  bairro?: string | null;
   imagem: string;
   preco: number;
 }

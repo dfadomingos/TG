@@ -59,6 +59,7 @@ async function downloadImage(url: string | null): Promise<string | null> {
 }
 
 let geminiQuotaExceeded = false;
+let groqQuotaExceeded = false;
 
 async function resumirComIA(descricao: string, titulo: string): Promise<string> {
   const prompt = `Você é um curador de um guia cultural de eventos de Franca-SP. 
@@ -79,7 +80,8 @@ Resumo:`;
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          signal: AbortSignal.timeout(15000),
         });
 
         if (res.ok) {
@@ -118,6 +120,39 @@ Resumo:`;
     }
   }
 
+  // Tenta Groq se Gemini falhou ou está sem cota
+  if (process.env.GROQ_API_KEY && !groqQuotaExceeded) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'groq/compound-mini',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 300,
+          temperature: 0.7
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const textoGerado = data.choices?.[0]?.message?.content;
+        if (textoGerado) return textoGerado.trim();
+      } else if (res.status === 429 || res.status === 402) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.error?.message || '';
+        if (errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('exceeded') || errorMsg.toLowerCase().includes('billing')) {
+          console.warn(`   ⚠️ Groq Quota/Billing Excedido! Desabilitando chamadas subsequentes à Groq nesta execução.`);
+          groqQuotaExceeded = true;
+        }
+      }
+    } catch (e) {
+      console.warn("   ⚠️ Erro ao acessar IA da Groq.");
+    }
+  }
+
   return descricao; // Fallback
 }
 
@@ -127,6 +162,9 @@ async function main() {
   console.log('━'.repeat(60));
   console.log('🔄 INICIANDO SINCRONIZAÇÃO: SYMPLA -> BANCO DE DADOS');
   console.log('━'.repeat(60));
+  
+  console.log('🔑 Gemini API Key:', process.env.GEMINI_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
+  console.log('🔑 Groq API Key:', process.env.GROQ_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
   
   try {
     // 1. Garantir que o organizador "Sympla" existe
@@ -168,10 +206,13 @@ async function main() {
     for (const raw of rawEvents) {
       const normalized = normalizeSymplaEvent(raw);
       
+      // Ignora eventos de teste (ex: "Teste Yuno", "TESTE FACIAL", etc)
+      if (normalized.titulo.toLowerCase().startsWith('teste')) {
+        console.log(`   🚫 [Sympla] Ignorado (Evento de Teste): "${normalized.titulo}"`);
+        continue;
+      }
+
       if (!normalized.data_horario) continue;
-
-
-
       // 3.1. Verifica se o evento já existe
       const existingEvent = await prisma.evento.findFirst({
         where: {
@@ -198,7 +239,7 @@ async function main() {
           const localImagePath = await downloadImage(normalized.imagem);
           finalImagePath = localImagePath || normalized.imagem || '';
         }
-        if (precisaIA && process.env.GEMINI_API_KEY) {
+        if (precisaIA && (process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY)) {
           console.log(`      🤖 [IA] Gerando descrição para evento atualizado: "${normalized.titulo}"`);
           descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
           chamouIA = true;
@@ -209,7 +250,7 @@ async function main() {
         finalImagePath = localImagePath || normalized.imagem || '';
 
         descricaoFormatada = normalized.descricao;
-        if (process.env.GEMINI_API_KEY) {
+        if (process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY) {
           console.log(`      🤖 [IA] Gerando descrição para novo evento: "${normalized.titulo}"`);
           descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
           chamouIA = true;

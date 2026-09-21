@@ -11,7 +11,10 @@ interface EventHeroProps {
   imagem: string;
   categoria?: CategoriaEvento;
   endereco: string;
-  bairro: string;
+  numero?: string | null;
+  bairro?: string | null;
+  complemento?: string | null;
+  cidade?: string | null;
   data: string;
 }
 
@@ -20,11 +23,29 @@ export function EventHero({
   imagem,
   categoria,
   endereco,
+  numero,
   bairro,
+  complemento,
+  cidade,
   data,
 }: EventHeroProps) {
-  // Compõe o local de exibição a partir de endereço + bairro
-  const localExibicao = `${endereco}, ${bairro}`;
+  // Compõe o local de exibição completo (Nome do local + Rua, Número + Bairro)
+  const partes: string[] = [];
+  const nomeLocal = complemento ? complemento.replace(/^\((.*)\)$/, '$1').trim() : '';
+  if (nomeLocal && nomeLocal.toLowerCase() !== endereco.toLowerCase()) {
+    partes.push(nomeLocal);
+  }
+
+  const ruaNum = [endereco, numero].filter(Boolean).join(', ');
+  if (ruaNum) {
+    partes.push(ruaNum);
+  }
+
+  if (bairro && !ruaNum.toLowerCase().includes(bairro.toLowerCase())) {
+    partes.push(bairro);
+  }
+
+  const localExibicao = partes.length > 0 ? partes.join(' — ') : endereco;
   // Label amigável da categoria
   const categoriaLabel = categoria ? CATEGORIA_LABELS[categoria] : "Show";
 
