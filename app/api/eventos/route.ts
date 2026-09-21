@@ -12,6 +12,9 @@ export async function GET(request: NextRequest) {
         data_horario: {
           gte: new Date(), // Somente eventos futuros
         },
+        NOT: {
+          titulo: { contains: 'teste', mode: 'insensitive' }
+        },
         ...(categoria && { categoria: categoria as any }),
       },
       include: {

@@ -207,9 +207,9 @@ async function main() {
       
       if (!normalized.data_horario) continue;
 
-      // Filtra eventos de teste da plataforma Q2
-      if (normalized.titulo.trim().toLowerCase().startsWith('teste')) {
-        console.log(`   🚫 Ignorado (evento de teste): "${normalized.titulo}"`);
+      // Filtra eventos de teste da plataforma Q2 (que contenham 'teste' no nome)
+      if (normalized.titulo.trim().toLowerCase().includes('teste')) {
+        console.log(`   🚫 [Q2] Ignorado (evento de teste): "${normalized.titulo}"`);
         continue;
       }
 

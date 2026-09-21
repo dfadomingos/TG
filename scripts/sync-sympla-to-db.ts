@@ -206,8 +206,8 @@ async function main() {
     for (const raw of rawEvents) {
       const normalized = normalizeSymplaEvent(raw);
       
-      // Ignora eventos de teste (ex: "Teste Yuno", "TESTE FACIAL", etc)
-      if (normalized.titulo.toLowerCase().startsWith('teste')) {
+      // Ignora eventos de teste (que contenham 'teste' no nome)
+      if (normalized.titulo.toLowerCase().includes('teste')) {
         console.log(`   🚫 [Sympla] Ignorado (Evento de Teste): "${normalized.titulo}"`);
         continue;
       }

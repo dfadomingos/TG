@@ -230,8 +230,8 @@ async function main() {
     for (const raw of rawEvents) {
       const normalized = normalizeDuoTicketEvent(raw);
       
-      // Ignora eventos de teste (ex: "Teste Yuno", "TESTE FACIAL", etc)
-      if (normalized.titulo.trim().toLowerCase().startsWith('teste')) {
+      // Ignora eventos de teste (que contenham 'teste' no nome)
+      if (normalized.titulo.trim().toLowerCase().includes('teste')) {
         console.log(`   🚫 [DuoTicket] Ignorado (Evento de Teste): "${normalized.titulo}"`);
         continue;
       }
