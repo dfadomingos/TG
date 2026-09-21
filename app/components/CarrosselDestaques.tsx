@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import IconLocal from "./IconLocal";
+import Link from "next/link";
+import IconCalendar from "./IconCalendar";
 import { CATEGORIA_LABELS } from "../types";
 import { formatarData } from "../utils/formatters";
 
@@ -153,10 +154,11 @@ export function CarrosselDestaques() {
             const isActive = activeIndex === index;
             
             return (
-              <div 
+              <Link 
                 key={evento.id} 
+                href={`/evento/${evento.id}`}
                 className={`
-                  relative shrink-0 w-[85%] sm:w-[60%] md:w-[45%] lg:w-[35%] h-64 rounded-2xl overflow-hidden snap-center shadow-lg cursor-pointer transition-all duration-500 ease-out
+                  relative shrink-0 w-[85%] sm:w-[60%] md:w-[45%] lg:w-[35%] h-64 rounded-2xl overflow-hidden snap-center shadow-lg cursor-pointer transition-all duration-500 ease-out block
                   ${isActive ? 'scale-115 z-10 opacity-100 shadow-2xl shadow-blue-500/20' : 'scale-95 opacity-50 hover:opacity-80 hover:scale-100'}
                 `}
               >
@@ -177,10 +179,10 @@ export function CarrosselDestaques() {
                   </span>
                   <h3 className={`text-2xl font-bold mb-1 transition-colors ${isActive ? 'text-white' : 'text-gray-300'}`}>{evento.titulo}</h3>
                   <p className={`text-sm flex items-center gap-2 transition-colors ${isActive ? 'text-gray-300' : 'text-gray-400'}`}>
-                    <IconLocal /> {formatarData(new Date(evento.data_horario))}
+                    <IconCalendar className="w-4 h-4 shrink-0" fill="currentColor" /> {formatarData(new Date(evento.data_horario))}
                   </p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

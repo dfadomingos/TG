@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import IconLocal from "./IconLocal";
 import IconHora from "./IconHora";
@@ -26,6 +27,7 @@ interface PropsCardEvento {
 }
 
 export function CardEvento({ id, titulo, data, endereco, numero, bairro, complemento, imagem, hora, preco, isFavorite, onToggleFavorite }: PropsCardEvento) {
+  const router = useRouter();
   const { isLoggedIn } = useAuth();
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
@@ -37,6 +39,12 @@ export function CardEvento({ id, titulo, data, endereco, numero, bairro, complem
     localExibicao = `${endereco}, ${bairro}`;
   }
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Se o clique for no botão de favoritar, não dispara a navegação
+    if ((e.target as HTMLElement).closest('button')) return;
+    router.push(`/evento/${id}`);
+  };
+
   const handleFavoriteClick = () => {
     if (!isLoggedIn) {
       setShowLoginPopup(true);
@@ -47,7 +55,10 @@ export function CardEvento({ id, titulo, data, endereco, numero, bairro, complem
 
   return (
     <>
-      <div className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col group cursor-pointer relative">
+      <div 
+        onClick={handleCardClick}
+        className="bg-gray-50 border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col group cursor-pointer relative"
+      >
 
         {/* área da imagem */}
         <div className="relative h-48 overflow-hidden">
