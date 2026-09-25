@@ -1,14 +1,13 @@
 import React from "react";
 import IconHora from "./IconHora";
 import IconLocal from "./IconLocal";
-import IconPriceTag from "./IconPriceTag";
 import IconHeart from "./IconHeart";
 import IconShare from "./IconShare";
 import { Button } from "./Button";
 
 interface EventSidebarProps {
   hora: string;
-  preco: string;
+  preco?: string;
   link_compra?: string | null;
   endereco?: string | null;
   numero?: string | null;
@@ -20,7 +19,6 @@ interface EventSidebarProps {
 
 export function EventSidebar({ 
   hora, 
-  preco, 
   link_compra,
   endereco,
   numero,
@@ -77,21 +75,12 @@ export function EventSidebar({
         )}
 
         {/* Horário */}
-        <div className="mb-6">
+        <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">
             <IconHora />
             <span className="font-bold text-base text-black">Horário</span>
           </div>
           <p className="text-base font-light text-black pl-8">{hora}</p>
-        </div>
-
-        {/* Preço */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <IconPriceTag fill="#000000" />
-            <span className="font-bold text-base text-black">Preço</span>
-          </div>
-          <p className="text-base font-light text-black pl-8">{preco}</p>
         </div>
 
         {/* Botão: Comprar Ingresso */}
