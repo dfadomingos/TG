@@ -34,6 +34,7 @@ model Organizador {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   eventos_criados Evento[]
+  favoritos       Favorito[]
 }
 
 model Evento {
@@ -71,15 +72,18 @@ model Evento {
 }
 
 model Favorito {
-  id        String   @id @default(cuid())
-  usuarioId String
-  eventoId  String
-  createdAt DateTime @default(now()) // quando foi favoritado
+  id            String       @id @default(cuid())
+  usuarioId     String?
+  organizadorId String?
+  eventoId      String
+  createdAt     DateTime     @default(now()) // quando foi favoritado
   //relacionamentos
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuario       Usuario?     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  organizador   Organizador? @relation(fields: [organizadorId], references: [id], onDelete: Cascade)
+  evento        Evento       @relation(fields: [eventoId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, eventoId]) // impede que o mesmo usuário favorite o mesmo evento 2x
+  @@unique([organizadorId, eventoId]) // impede que o mesmo organizador favorite o mesmo evento 2x
 }
 
 enum EventStatus {

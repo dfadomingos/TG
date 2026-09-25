@@ -574,12 +574,19 @@ function parseMapAddress(raw: string): {
 } | null {
   if (!raw || raw.length < 5) return null;
 
+  // Remove qualquer resquício de script JavaScript injetado
+  raw = raw.replace(/\(?function\b[\s\S]*/i, '').trim();
+  raw = raw.replace(/document\.getElementById[\s\S]*/i, '').trim();
+
   // Separa venue do endereço pelo pipe
   const pipeIdx = raw.indexOf('|');
   if (pipeIdx === -1) return null;
 
   const venue = raw.substring(0, pipeIdx).trim();
   let rest = raw.substring(pipeIdx + 1).trim();
+  // Remove scripts que possam estar na parte do endereço
+  rest = rest.replace(/\(?function\b[\s\S]*/i, '').trim();
+  rest = rest.replace(/document\.getElementById[\s\S]*/i, '').trim();
   // Remove trailing comma/spaces
   rest = rest.replace(/[,\s]+$/, '');
 
@@ -694,12 +701,20 @@ export async function enrichDuoTicketEventsWithPuppeteer(
         const mapText = await page.evaluate(() => {
           const mapDiv = document.querySelector('.loading-mapa');
           if (!mapDiv) return null;
+          // Clona e remove scripts e estilos para não poluir o endereço
+          const clone = mapDiv.cloneNode(true) as HTMLElement;
+          const toRemove = clone.querySelectorAll('script, style');
+          toRemove.forEach(el => el.remove());
+
           // Get only the address line, which is after the links section
-          const text = mapDiv.textContent?.replace(/\s+/g, ' ').trim() || '';
+          const text = clone.textContent?.replace(/\s+/g, ' ').trim() || '';
           // The address line is after "Abrir Maps" text
           const mapsIdx = text.indexOf('Abrir Maps');
           if (mapsIdx !== -1) {
-            return text.substring(mapsIdx + 'Abrir Maps'.length).trim();
+            let res = text.substring(mapsIdx + 'Abrir Maps'.length).trim();
+            const fnIdx = res.indexOf('(function');
+            if (fnIdx !== -1) res = res.substring(0, fnIdx).trim();
+            return res;
           }
           // Fallback: look for pipe separator
           const pipeIdx = text.indexOf('|');
@@ -708,7 +723,10 @@ export async function enrichDuoTicketEventsWithPuppeteer(
             const beforePipe = text.substring(Math.max(0, pipeIdx - 80), pipeIdx).trim();
             const lastSpace = beforePipe.lastIndexOf(' ');
             const venuePart = lastSpace !== -1 ? beforePipe.substring(lastSpace + 1) : beforePipe;
-            return text.substring(pipeIdx - venuePart.length).trim();
+            let res = text.substring(pipeIdx - venuePart.length).trim();
+            const fnIdx = res.indexOf('(function');
+            if (fnIdx !== -1) res = res.substring(0, fnIdx).trim();
+            return res;
           }
           return null;
         });

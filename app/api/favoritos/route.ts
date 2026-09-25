@@ -3,20 +3,33 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
-    const { usuarioId, eventoId } = await request.json();
+    const { usuarioId, organizadorId, eventoId } = await request.json();
+    const id = usuarioId || organizadorId;
 
-    if (!usuarioId || !eventoId) {
+    if (!id || !eventoId) {
       return NextResponse.json(
-        { error: 'usuarioId e eventoId são obrigatórios' },
+        { error: 'ID do usuário/organizador e eventoId são obrigatórios' },
         { status: 400 }
       );
     }
 
-    // Verifica se já existe o favorito
+    // Identifica se o ID pertence a um Usuario ou a um Organizador
+    const isUsuario = await prisma.usuario.findUnique({ where: { id } });
+    const isOrganizador = !isUsuario ? await prisma.organizador.findUnique({ where: { id } }) : null;
+
+    if (!isUsuario && !isOrganizador) {
+      return NextResponse.json(
+        { error: 'Conta não encontrada' },
+        { status: 404 }
+      );
+    }
+
+    const whereClause = isUsuario
+      ? { usuarioId_eventoId: { usuarioId: id, eventoId } }
+      : { organizadorId_eventoId: { organizadorId: id, eventoId } };
+
     const favoritoExistente = await prisma.favorito.findUnique({
-      where: {
-        usuarioId_eventoId: { usuarioId, eventoId },
-      },
+      where: whereClause,
     });
 
     if (favoritoExistente) {
@@ -28,7 +41,11 @@ export async function POST(request: NextRequest) {
     } else {
       // Se não existe, cria (favoritar)
       await prisma.favorito.create({
-        data: { usuarioId, eventoId },
+        data: {
+          usuarioId: isUsuario ? id : null,
+          organizadorId: isOrganizador ? id : null,
+          eventoId,
+        },
       });
       return NextResponse.json({ favorited: true });
     }
@@ -42,23 +59,36 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET — retorna os IDs dos eventos favoritados por um usuário
+// GET — retorna os IDs dos eventos favoritados ou a lista completa de eventos
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const usuarioId = searchParams.get('usuarioId');
+    const userId = searchParams.get('usuarioId') || searchParams.get('userId') || searchParams.get('organizadorId');
+    const includeEventos = searchParams.get('includeEventos') === 'true';
 
-    if (!usuarioId) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'usuarioId é obrigatório' },
+        { error: 'ID é obrigatório' },
         { status: 400 }
       );
     }
 
     const favoritos = await prisma.favorito.findMany({
-      where: { usuarioId },
-      select: { eventoId: true },
+      where: {
+        OR: [
+          { usuarioId: userId },
+          { organizadorId: userId }
+        ]
+      },
+      include: {
+        evento: includeEventos,
+      },
+      orderBy: { createdAt: 'desc' },
     });
+
+    if (includeEventos) {
+      return NextResponse.json({ favoritos });
+    }
 
     const eventoIds = favoritos.map(f => f.eventoId);
     return NextResponse.json({ eventoIds });

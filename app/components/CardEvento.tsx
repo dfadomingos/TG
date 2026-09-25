@@ -32,11 +32,12 @@ export function CardEvento({ id, titulo, data, endereco, numero, bairro, complem
   const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   const nomeLocal = complemento ? complemento.replace(/^\((.*)\)$/, '$1').trim() : '';
-  let localExibicao = endereco;
+  const ruaComNumero = [endereco, numero && !endereco.includes(numero) ? numero : null].filter(Boolean).join(', ');
+  let localExibicao = ruaComNumero || endereco;
   if (nomeLocal && nomeLocal.toLowerCase() !== endereco.toLowerCase()) {
-    localExibicao = `${nomeLocal} - ${endereco}`;
+    localExibicao = `${nomeLocal} - ${ruaComNumero || endereco}`;
   } else if (bairro) {
-    localExibicao = `${endereco}, ${bairro}`;
+    localExibicao = `${ruaComNumero || endereco}, ${bairro}`;
   }
 
   const handleCardClick = (e: React.MouseEvent) => {

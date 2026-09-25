@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { IconHome } from "@/app/components/IconHome";
+import IconHeart from "@/app/components/IconHeart";
 import { IconProfileBadge } from "@/app/components/IconProfileBadge";
 import { IconLogout } from "@/app/components/IconLogout";
 
@@ -79,6 +80,14 @@ export function SidebarOrganizador({ isOpen = false, onClose }: SidebarProps) {
           >
             <IconCalendar className="w-5 h-5" />
             <span className="font-semibold">Meus Eventos</span>
+          </Link>
+
+          <Link 
+            href="/painel-organizador/favoritos" 
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive("/painel-organizador/favoritos")}`}
+          >
+            <IconHeart className="w-5 h-5 fill-white text-white" />
+            <span className="font-semibold">Meus Favoritos</span>
           </Link>
 
           <Link 

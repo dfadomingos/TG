@@ -28,25 +28,26 @@ interface FavoritoComEvento {
   evento: EventoFavorito;
 }
 
-export default function PainelUsuarioPage() {
+export default function PainelOrganizadorFavoritosPage() {
   const { user, isLoggedIn } = useAuth();
   const router = useRouter();
   const [categoriaAtiva, setCategoriaAtiva] = useState("Todos");
   const [favoritos, setFavoritos] = useState<FavoritoComEvento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Buscar dados do painel
-  const fetchDashboard = useCallback(async () => {
+  // Buscar eventos favoritados pelo organizador
+  const fetchFavoritos = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/usuarios/dashboard/${user.id}`);
+      const res = await fetch(`/api/favoritos?userId=${user.id}&includeEventos=true`);
       if (res.ok) {
         const data = await res.json();
-        setFavoritos(data.favoritos || []);
+        const lista = (data.favoritos || []).filter((f: FavoritoComEvento) => f.evento);
+        setFavoritos(lista);
       }
     } catch (error) {
-      console.error("Erro ao carregar painel:", error);
+      console.error("Erro ao carregar favoritos:", error);
     } finally {
       setIsLoading(false);
     }
@@ -57,8 +58,8 @@ export default function PainelUsuarioPage() {
       router.push("/login");
       return;
     }
-    fetchDashboard();
-  }, [isLoggedIn, router, fetchDashboard]);
+    fetchFavoritos();
+  }, [isLoggedIn, router, fetchFavoritos]);
 
   // Filtrar por categoria
   const eventosFiltrados = favoritos.filter(fav => {
@@ -77,18 +78,18 @@ export default function PainelUsuarioPage() {
       const res = await fetch("/api/favoritos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usuarioId: user.id, eventoId }),
+        body: JSON.stringify({ organizadorId: user.id, eventoId }),
       });
 
       if (!res.ok) {
-        fetchDashboard();
+        fetchFavoritos();
       }
     } catch {
-      fetchDashboard();
+      fetchFavoritos();
     }
   };
 
-  const primeiroNome = user?.nome?.split(" ")[0] || "Usuário";
+  const primeiroNome = user?.nome?.split(" ")[0] || "Organizador";
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -124,7 +125,7 @@ export default function PainelUsuarioPage() {
             <p className="text-gray-500">Carregando seus favoritos...</p>
           </div>
         ) : eventosFiltrados.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
             {eventosFiltrados.map(fav => (
               <CardEvento
                 key={fav.id}
@@ -145,7 +146,9 @@ export default function PainelUsuarioPage() {
           </div>
         ) : (
           <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-            <p className="text-gray-500">Você não possui eventos favoritados{categoriaAtiva !== "Todos" ? " nesta categoria" : ""}.</p>
+            <p className="text-gray-500">
+              Você não possui eventos favoritados{categoriaAtiva !== "Todos" ? " nesta categoria" : ""}.
+            </p>
           </div>
         )}
       </div>
