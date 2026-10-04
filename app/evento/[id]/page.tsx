@@ -3,7 +3,7 @@ import { Header } from "@/app/components/Header";
 import { Footer } from "@/app/components/Footer";
 import { EventHero } from "@/app/components/EventHero";
 import { EventSidebar } from "@/app/components/EventSidebar";
-import { formatarData, formatarHora } from "@/app/utils/formatters";
+import { formatarData, formatarHora, formatarPreco } from "@/app/utils/formatters";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
@@ -34,6 +34,7 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
         select: {
           nome: true,
           nome_produtora: true,
+          email: true,
         },
       },
     },
@@ -56,6 +57,13 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
       </div>
     );
   }
+
+  // Regra de Negócio (RF005): Se o evento foi cadastrado diretamente por um organizador
+  // da plataforma (não via extração automatizada Sympla), exibe o valor do ingresso.
+  const isOrganizadorManual = evento.organizer?.email !== "sistema@sympla.com.br";
+  const precoFormatado = isOrganizadorManual
+    ? formatarPreco(evento.preco)
+    : undefined;
 
   return (
     <div 
@@ -110,6 +118,7 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
           {/* Sidebar Area */}
           <EventSidebar 
             hora={formatarHora(evento.data_horario)}
+            preco={precoFormatado}
             link_compra={evento.link_compra}
             endereco={evento.endereco}
             numero={evento.numero}

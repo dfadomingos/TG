@@ -19,6 +19,7 @@ interface EventSidebarProps {
 
 export function EventSidebar({ 
   hora, 
+  preco,
   link_compra,
   endereco,
   numero,
@@ -83,13 +84,30 @@ export function EventSidebar({
           <p className="text-base font-light text-black pl-8">{hora}</p>
         </div>
 
-        {/* Botão: Comprar Ingresso */}
+        {/* Preço / Valor do Ingresso (Regra RF005: Exibido para eventos de organizador) */}
+        {preco && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm">🎟</span>
+              <span className="font-bold text-base text-black">Ingresso</span>
+            </div>
+            <p className="text-base font-semibold text-gray-900 pl-8">{preco}</p>
+          </div>
+        )}
+
+        {/* Botão: Comprar Ingresso / Entrada Gratuita */}
         {link_compra ? (
           <a href={link_compra} target="_blank" rel="noopener noreferrer" className="block w-full mb-6">
             <Button variant="accent" fullWidth className="h-[52px] text-lg shadow-md">
               🎟 Comprar Ingresso
             </Button>
           </a>
+        ) : preco === "Gratuito" ? (
+          <div className="w-full mb-6">
+            <Button variant="accent" fullWidth className="h-[52px] text-lg shadow-md bg-emerald-600 hover:bg-emerald-700 text-white cursor-default">
+              🎉 Entrada Gratuita
+            </Button>
+          </div>
         ) : (
           <Button variant="accent" fullWidth className="h-[52px] text-lg mb-6 shadow-md opacity-50 cursor-not-allowed">
             🎟 Ingressos Indisponíveis

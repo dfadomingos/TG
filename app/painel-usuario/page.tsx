@@ -70,7 +70,6 @@ export default function PainelUsuarioPage() {
   const handleDesfavoritar = async (eventoId: string) => {
     if (!user) return;
 
-    // Atualização otimista: remove da lista
     setFavoritos(prev => prev.filter(f => f.eventoId !== eventoId));
 
     try {
