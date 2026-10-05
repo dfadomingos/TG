@@ -192,7 +192,31 @@ export default function CadastroPage() {
                 <div className="flex flex-col gap-2 mt-1 pt-3 md:pt-3 border-t border-black/30">
                   <Checkbox
                     name="termos"
-                    label="Li e aceito os Termos de Uso e a Política de Privacidade (obrigatório)" 
+                    label={
+                      <span>
+                        Li e aceito os{" "}
+                        <Link
+                          href="/termos"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#0A2342] underline hover:text-[#F59E0B] font-bold transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Termos de Uso
+                        </Link>{" "}
+                        e a{" "}
+                        <Link
+                          href="/termos#privacidade"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#0A2342] underline hover:text-[#F59E0B] font-bold transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Política de Privacidade
+                        </Link>{" "}
+                        (obrigatório)
+                      </span>
+                    } 
                     required 
                   />
                   <Checkbox

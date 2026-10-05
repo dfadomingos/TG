@@ -229,7 +229,31 @@ export default function CadastroOrganizadorPage() {
                 <div className="flex flex-col gap-2 mt-1 pt-3 md:pt-3 border-t border-black/30">
                   <Checkbox
                     name="aceitou_termos"
-                    label="Declaro que li os Termos de Uso e me responsabilizo pela veracidade das informações e eventos publicados no FrancaEventos" 
+                    label={
+                      <span>
+                        Declaro que li os{" "}
+                        <Link
+                          href="/termos"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#0A2342] underline hover:text-[#F59E0B] font-bold transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Termos de Uso
+                        </Link>{" "}
+                        e a{" "}
+                        <Link
+                          href="/termos#privacidade"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#0A2342] underline hover:text-[#F59E0B] font-bold transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Política de Privacidade
+                        </Link>
+                        , e me responsabilizo pela veracidade das informações e eventos publicados no FrancaEventos (obrigatório)
+                      </span>
+                    } 
                     required 
                   />
                 </div>
