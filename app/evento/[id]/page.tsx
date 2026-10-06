@@ -58,12 +58,14 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  // Regra de Negócio (RF005): Se o evento foi cadastrado diretamente por um organizador
-  // da plataforma (não via extração automatizada Sympla), exibe o valor do ingresso.
+  // - Se o evento foi cadastrado diretamente por um organizador manual (com preço fixo >= 0),
+  //   exibe o valor do ingresso formatado (ex: "R$ 50,00" ou "Gratuito").
+  // - Se for oriundo de integração externa/sincronização (ou sem preço fixo),
+  //   orienta o usuário a consultar os valores na bilheteria oficial indicada no botão abaixo.
   const isOrganizadorManual = evento.organizer?.email !== "sistema@sympla.com.br";
-  const precoFormatado = isOrganizadorManual
+  const precoFormatado = isOrganizadorManual && evento.preco >= 0
     ? formatarPreco(evento.preco)
-    : undefined;
+    : "Consulte valores na bilheteria oficial abaixo";
 
   return (
     <div 

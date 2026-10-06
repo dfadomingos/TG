@@ -84,14 +84,16 @@ export function EventSidebar({
           <p className="text-base font-light text-black pl-8">{hora}</p>
         </div>
 
-        {/* Preço / Valor do Ingresso (Regra RF005: Exibido para eventos de organizador) */}
+        {/* Preço / Valor do Ingresso (Regra RF005: Exibido para organizador manual ou orientação para bilheteria) */}
         {preco && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm">🎟</span>
               <span className="font-bold text-base text-black">Ingresso</span>
             </div>
-            <p className="text-base font-semibold text-gray-900 pl-8">{preco}</p>
+            <p className="text-sm md:text-base font-semibold text-gray-900 pl-8 leading-snug">
+              {preco}
+            </p>
           </div>
         )}
 
