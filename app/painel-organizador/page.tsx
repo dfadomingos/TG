@@ -22,6 +22,16 @@ interface EventoCriado {
   imagem: string;
   preco: number;
   status: string;
+  views?: number;
+}
+
+function IconEye({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
 }
 
 function IconCalendar({ className }: { className?: string }) {
@@ -93,11 +103,12 @@ export default function PainelOrganizadorPage() {
   };
 
   const primeiroNome = user?.nome?.split(" ")[0] || "Organizador";
+  const totalVisualizacoes = eventos.reduce((acc, curr) => acc + (curr.views || 0), 0);
 
   return (
     <div className="flex flex-col h-full w-full">
       {/* Welcome Message */}
-      <div className="mb-8 pl-4 sm:pl-8 flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+      <div className="mb-6 pl-4 sm:pl-8 flex flex-col md:flex-row md:justify-between md:items-start gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 mb-1">
             Olá, {primeiroNome}
@@ -105,6 +116,29 @@ export default function PainelOrganizadorPage() {
           <p className="text-gray-500 text-sm md:text-base">
             Bem-vindo ao seu painel de controle
           </p>
+        </div>
+      </div>
+
+      {/* Resumo de Métricas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8 px-4 sm:px-8">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-blue-50 text-background-button rounded-xl">
+            <IconCalendar className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Eventos Cadastrados</p>
+            <p className="text-2xl font-black text-gray-900">{eventos.length}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+            <IconEye className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total de Visualizações</p>
+            <p className="text-2xl font-black text-gray-900">{totalVisualizacoes}</p>
+          </div>
         </div>
       </div>
 
@@ -142,7 +176,7 @@ export default function PainelOrganizadorPage() {
         ) : eventosFiltrados.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
             {eventosFiltrados.map(evento => (
-              <div key={evento.id} className="flex flex-col h-full group">
+              <div key={evento.id} className="flex flex-col h-full group bg-white p-3 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                 {/* O card principal */}
                 <div className="flex-1 relative">
                   <CardEvento
@@ -158,9 +192,22 @@ export default function PainelOrganizadorPage() {
                     preco={formatarPreco(evento.preco)}
                   />
                 </div>
+
+                {/* Métricas e Estatísticas do Evento */}
+                <div className="flex items-center justify-between text-xs text-gray-600 font-medium px-1 mt-3">
+                  <div className="flex items-center gap-1.5 text-gray-700">
+                    <IconEye className="w-4 h-4 text-background-button" />
+                    <span>
+                      <strong className="text-gray-900">{evento.views ?? 0}</strong> {evento.views === 1 ? 'visualização' : 'visualizações'}
+                    </span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${evento.status === 'Publicado' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {evento.status}
+                  </span>
+                </div>
                 
                 {/* Botões de Ação do Organizador */}
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
                   <Link 
                     href={`/evento/${evento.id}/editar`}
                     className="flex-1 text-center py-2 px-4 rounded-lg text-sm font-bold border-2 border-background-button text-background-button hover:bg-background-button hover:text-white transition-colors"

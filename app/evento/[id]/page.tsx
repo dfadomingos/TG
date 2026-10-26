@@ -24,21 +24,43 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   };
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function EventoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const evento = await prisma.evento.findUnique({
-    where: { id },
-    include: {
-      organizer: {
-        select: {
-          nome: true,
-          nome_produtora: true,
-          email: true,
+  // Busca e incrementa a contagem de visualizações do evento
+  let evento = null;
+  try {
+    evento = await prisma.evento.update({
+      where: { id },
+      data: {
+        views: { increment: 1 },
+      },
+      include: {
+        organizer: {
+          select: {
+            nome: true,
+            nome_produtora: true,
+            email: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch {
+    evento = await prisma.evento.findUnique({
+      where: { id },
+      include: {
+        organizer: {
+          select: {
+            nome: true,
+            nome_produtora: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
 
   if (!evento) {
     return (
