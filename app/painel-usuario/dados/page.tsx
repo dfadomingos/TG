@@ -120,19 +120,19 @@ export default function MeusDadosPage() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full">
-      {/* Título */}
-      <div className="mb-6 pl-4 sm:pl-8">
-        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 mb-1">
-          Meus Dados
-        </h1>
-        <p className="text-gray-500 text-sm md:text-base">
-          Visualize e edite suas informações pessoais
-        </p>
-      </div>
+    <div className="flex flex-col items-center w-full pb-10">
+      <div className="w-full max-w-[640px] px-2 sm:px-0">
+        {/* Título */}
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900 mb-1">
+            Meus Dados
+          </h1>
+          <p className="text-gray-500 text-sm md:text-base">
+            Visualize e edite suas informações pessoais
+          </p>
+        </div>
 
-      {/* Form Card */}
-      <div className="mx-4 sm:mx-8 max-w-[640px]">
+        {/* Form Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8">
 
           {/* Mensagens de feedback */}
