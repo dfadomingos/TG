@@ -1,17 +1,18 @@
 /**
  * Q2 Ingressos - Service de Extração de Eventos
  *
- * Abordagem: Puppeteer (headless browser) com fallback para dados pré-extraídos.
+ * Abordagem: API pública de cache da Q2 (`cache-control-api.q2ingressos.com.br`)
+ * com fallback automático via Puppeteer (headless browser) para a nova interface
+ * em Expo / React Native Web (`/search?search=...`).
  *
  * Justificativa:
- * - A Q2 NÃO possui API pública documentada.
- * - A BFF API (q2ingressos-bff.q2ingressos.com.br/api/) requer headers
- *   de autenticação/CSRF que o frontend envia automaticamente.
- * - O site usa Next.js com Client-Side Rendering (BAILOUT_TO_CLIENT_SIDE_RENDERING),
- *   o que significa que o HTML estático vem vazio — sem dados de eventos.
- * - Portanto, Cheerio sozinho NÃO consegue extrair os eventos da listagem.
- * - A solução definitiva é Puppeteer (headless browser) que executa o JavaScript
- *   e permite ler o DOM renderizado.
+ * - A Q2 migrou seu portal para Expo / React Native Web (CSR sem tags `<a>`),
+ *   consumindo `cache-control-api.q2ingressos.com.br/api/v1/home` na listagem
+ *   e `/api/v1/compat/getEventTicketsBySlug` nos detalhes do evento.
+ * - Consultar essa API diretamente é muito mais rápido (~2s), estável e retorna
+ *   horário exato, lotes/preços estruturados e descrição completa em HTML.
+ * - Caso o token público mude ou a API oscile, o Puppeteer intercepta o novo token
+ *   ou extrai os cards renderizados via `[data-testid^="card_home_search_result_"]`.
  *
  * Estrutura:
  * ├── Tipos e interfaces
@@ -20,9 +21,10 @@
  * ├── parseDataQ2() / parseLocalQ2() / parsePrecoQ2() — parsers
  * ├── normalizeQ2Event() — normaliza dados para formato Prisma
  * ├── inferirCategoria() — inferência de categoria pelo título
- * ├── getQ2EventsPuppeteer() — extração real via headless browser ★
- * ├── getQ2EventsPreExtracted() — dados fixos (fallback)
- * └── getQ2Events() — tentativa via Cheerio (limitado por CSR)
+ * ├── getQ2EventsByApi() — extração rápida via API de cache da Q2 ★
+ * ├── getQ2EventsPuppeteer() — extração principal (API + fallback Puppeteer) ★
+ * ├── getQ2EventsPreExtracted() — dados fixos (fallback legado)
+ * └── getQ2Events() — alias de extração via API/Cheerio
  */
 
 import * as cheerio from 'cheerio';
@@ -72,11 +74,61 @@ export interface Q2EventNormalized {
   fonte: 'q2ingressos';
 }
 
+interface Q2HomeApiItem {
+  Id: number;
+  Name: string;
+  StartDate: string;
+  EndDate?: string | null;
+  ImageEvent?: string | null;
+  ImageHomeEvent?: string | null;
+  Place?: string | null;
+  City?: string | null;
+  State?: string | null;
+  Slug: string;
+  Description?: string | null;
+  IsMasterEvent?: boolean;
+  IsSessionEvent?: boolean;
+}
+
+interface Q2TicketItem {
+  id?: number;
+  name?: string;
+  value?: number;
+  available?: number | null;
+}
+
+interface Q2SectionItem {
+  id?: number;
+  name?: string;
+  tickets?: Q2TicketItem[];
+}
+
+interface Q2CompatDetailResponse {
+  status?: string;
+  id?: number;
+  slug?: string;
+  name?: string;
+  date?: string;
+  time?: string | null;
+  location?: string | null;
+  city?: string | null;
+  state?: string | null;
+  eventImage?: string | null;
+  imageHomeEvent?: string | null;
+  websiteInformations?: string | null;
+  allowFreeTickets?: boolean;
+  isSessionEventChild?: boolean;
+  sessionEventMasterSlug?: string | null;
+  sections?: Q2SectionItem[];
+}
+
 // ─── Constantes ─────────────────────────────────────────────────────
 
 const BASE_URL = 'https://q2ingressos.com.br';
-const SEARCH_URL = `${BASE_URL}/resultados`;
+const SEARCH_URL = `${BASE_URL}/search`;
 const CDN_URL = 'https://cdn.q2ingressos.com.br';
+const CACHE_API_URL = 'https://cache-control-api.q2ingressos.com.br/api/v1';
+const DEFAULT_COMPAT_TOKEN = '56f869f6c051130a44cffbbc1c304525';
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
@@ -86,6 +138,24 @@ const USER_AGENT =
  */
 const VENUES_ADDRESSES: Record<string, VenueAddress> = {
   'ginasio pedrocao': {
+    rua: 'Rua dos Pracinhas',
+    numero: '510',
+    bairro: 'Residencial Paraiso',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-160',
+    endereco_completo: 'R. dos Pracinhas, 510 - Res. Paraiso, Franca - SP, 14403-160',
+  },
+  'ginasio poliesportivo pedro morilla fuentes': {
+    rua: 'Rua dos Pracinhas',
+    numero: '510',
+    bairro: 'Residencial Paraiso',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-160',
+    endereco_completo: 'R. dos Pracinhas, 510 - Res. Paraiso, Franca - SP, 14403-160',
+  },
+  'pedrocao': {
     rua: 'Rua dos Pracinhas',
     numero: '510',
     bairro: 'Residencial Paraiso',
@@ -156,19 +226,70 @@ const VENUES_ADDRESSES: Record<string, VenueAddress> = {
     estado: 'SP',
     cep: '14402-000',
     endereco_completo: 'Av. Presidente Vargas, 3630 - Recanto do Itambé, Franca - SP',
-  }
+  },
+  'castelinho': {
+    rua: 'Avenida Miguel Sábio de Mello',
+    numero: '351',
+    bairro: 'Vila Santa Rita',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-068',
+    endereco_completo: 'Av. Miguel Sábio de Mello, 351 - Vila Santa Rita, Franca - SP, 14403-068',
+  },
+  'aec castelinho': {
+    rua: 'Avenida Miguel Sábio de Mello',
+    numero: '351',
+    bairro: 'Vila Santa Rita',
+    cidade: 'Franca',
+    estado: 'SP',
+    cep: '14403-068',
+    endereco_completo: 'Av. Miguel Sábio de Mello, 351 - Vila Santa Rita, Franca - SP, 14403-068',
+  },
 };
+
+function normalizeText(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+/**
+ * Converte caminhos de imagem internos da Q2 (`/Content/images/...` ou `admin.quero2ingressos.com.br`)
+ * para a URL pública válida da CDN Thumbor (`cdn.q2ingressos.com.br`).
+ */
+export function buildQ2CdnImageUrl(rawUrl?: string | null): string {
+  if (!rawUrl) return '';
+  const trimmed = rawUrl.trim();
+  if (!trimmed || trimmed.includes('/default.jpg') || trimmed.includes('/default.png')) {
+    return '';
+  }
+  if (trimmed.startsWith(`${CDN_URL}/`)) {
+    return trimmed;
+  }
+  const contentIdx = trimmed.indexOf('/Content/');
+  if (contentIdx !== -1) {
+    const contentPath = trimmed.substring(contentIdx);
+    return `${CDN_URL}/fit-in/768x441/filters:format(webp):quality(95)/img${contentPath}`;
+  }
+  if (!trimmed.startsWith('http')) {
+    return `${CDN_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+  }
+  return trimmed;
+}
 
 /**
  * Resolve o endereço completo de um venue pelo nome.
  * Busca no lookup table VENUES_ADDRESSES.
  */
 export function resolveVenueAddress(venueName: string): VenueAddress | null {
-  const normalized = venueName
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove acentos
-    .trim();
+  const normalized = normalizeText(venueName);
+
+  // Evita falsos positivos com strings vazias ou "." (ex: key.includes(""))
+  if (!normalized || normalized.length < 3) {
+    return null;
+  }
 
   // Busca exata
   if (VENUES_ADDRESSES[normalized]) {
@@ -202,6 +323,7 @@ async function fetchWithRetry(url: string, retries = 3): Promise<string> {
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
         },
+        signal: AbortSignal.timeout(15000),
       });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -215,27 +337,38 @@ async function fetchWithRetry(url: string, retries = 3): Promise<string> {
   throw new Error('fetchWithRetry: todas as tentativas falharam');
 }
 
-// ─── Parse de data PT-BR ────────────────────────────────────────────
+// ─── Parse de data PT-BR / ISO ──────────────────────────────────────
 
 /**
- * Converte string de data no formato Q2 para Date.
+ * Converte string de data no formato Q2 (ISO da API ou PT-BR do DOM) para Date.
  * Formatos suportados:
+ *   - "2026-11-20T20:00:00"
  *   - "SÁB, 25 de ABR."
- *   - "SEX, 08 de MAI."
- *   - "DOM, 10 de MAI."
- *   - "QUA, 22 de ABR."
+ *   - "SEX, 08 de MAI. - ABERTURA 19:30"
+ *   - "SEX 20 NOVEMBRO Abertura 20:00h"
  */
 export function parseDataQ2(dataStr: string): Date | null {
   try {
-    // Remove pontos e espaços extras
-    const cleaned = dataStr.replace(/\./g, '').trim().toUpperCase();
+    if (!dataStr) return null;
 
-    // Formato: "DIA_SEMANA, DD de MES - ABERTURA HH:MM"
-    const match = cleaned.match(/(\d{1,2})\s+DE\s+(\w{3})/);
+    // 1. Formato ISO vindo da API da Q2: "YYYY-MM-DD" ou "YYYY-MM-DDTHH:mm:ss"
+    const isoMatch = dataStr.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{1,2}):(\d{2}))?/);
+    if (isoMatch) {
+      const ano = parseInt(isoMatch[1], 10);
+      const mesIdx = parseInt(isoMatch[2], 10) - 1;
+      const dia = parseInt(isoMatch[3], 10);
+      const hora = isoMatch[4] ? parseInt(isoMatch[4], 10) : 0;
+      const minuto = isoMatch[5] ? parseInt(isoMatch[5], 10) : 0;
+      return new Date(ano, mesIdx, dia, hora, minuto);
+    }
+
+    // 2. Formato PT-BR ("DIA_SEMANA, DD de MES" ou "DD MES")
+    const cleaned = dataStr.replace(/\./g, '').trim().toUpperCase();
+    const match = cleaned.match(/(\d{1,2})\s+(?:DE\s+)?([A-ZÇ]{3,})/);
     if (!match) return null;
 
     const dia = parseInt(match[1], 10);
-    const mesAbrev = match[2];
+    const mesAbrev = match[2].substring(0, 3);
     const mesIdx = MESES_PT[mesAbrev];
 
     if (mesIdx === undefined || isNaN(dia)) return null;
@@ -313,12 +446,12 @@ export function parseLocalQ2(localStr: string): {
  */
 export function parsePrecoQ2(precoStr?: string): number {
   if (precoStr === undefined || precoStr === null || precoStr.trim() === '') return -1;
-  
+
   const precoStrLimpo = precoStr.trim().toLowerCase();
   if (precoStrLimpo.includes('gratuito') || precoStrLimpo.includes('grátis') || precoStrLimpo.includes('gratis') || precoStrLimpo.includes('free')) {
     return 0;
   }
-  
+
   const match = precoStr.match(/R\$\s*([\d.,]+)/);
   if (!match) return -1;
   return parseFloat(match[1].replace(',', '.')) || -1;
@@ -336,28 +469,26 @@ export function normalizeQ2Event(raw: Q2EventRaw): Q2EventNormalized {
   const preco = parsePrecoQ2(raw.preco);
 
   // Resolve endereço completo via Google Maps lookup
-  const venueAddr = resolveVenueAddress(venueName);
+  const cleanVenueName = venueName === '.' ? '' : venueName;
+  const venueAddr = resolveVenueAddress(cleanVenueName);
 
-  // Garante que a imagem tem URL completa
-  let imagem = raw.imagemUrl || '';
-  if (imagem && !imagem.startsWith('http')) {
-    imagem = `${CDN_URL}${imagem}`;
-  }
+  // Garante que a imagem tem URL válida na CDN da Q2
+  const imagem = buildQ2CdnImageUrl(raw.imagemUrl);
 
   // Garante que o link tem URL completa
   let link = raw.link;
   if (link && !link.startsWith('http')) {
-    link = `${BASE_URL}${link}`;
+    link = `${BASE_URL}${link.startsWith('/') ? '' : '/'}${link}`;
   }
 
   return {
     titulo: raw.titulo,
     descricao: raw.descricao || raw.titulo,
     data_horario,
-    endereco: venueAddr?.rua || venueName || parsedCidade,
+    endereco: venueAddr?.rua || cleanVenueName || parsedCidade,
     numero: venueAddr?.numero || null,
     bairro: venueAddr?.bairro || null,
-    complemento: venueName ? `(${venueName})` : null,
+    complemento: cleanVenueName ? `(${cleanVenueName})` : null,
     cidade: venueAddr?.cidade || parsedCidade,
     estado: venueAddr?.estado || parsedEstado,
     cep: venueAddr?.cep || null,
@@ -399,7 +530,7 @@ function inferirCategoria(titulo: string): string {
   if (
     t.includes('gastrono') || t.includes('bacon') || t.includes('feijoada') ||
     t.includes('almoço') || t.includes('almoco') || t.includes('jantar') ||
-    t.includes('culinár')
+    t.includes('culinár') || t.includes('queima do alho')
   ) return 'Gastronomia';
 
   // Palestra / Congresso
@@ -429,22 +560,384 @@ function inferirCategoria(titulo: string): string {
   return 'Outros';
 }
 
-// ─── Tentativa de extração via Cheerio (página individual) ──────────
+// ─── Helpers de extração da API da Q2 ───────────────────────────────
+
+/**
+ * Extrai descrição limpa (sem rodapé jurídico genérico da Q2), horário de abertura
+ * e link do Google Maps a partir do HTML `websiteInformations` retornado pela API.
+ */
+function parseWebsiteInformations(html?: string | null): {
+  descricaoLimpa: string;
+  localLink?: string;
+  localTexto?: string;
+  horarioTexto?: string;
+} {
+  if (!html) return { descricaoLimpa: '' };
+
+  const $ = cheerio.load(html);
+  let localLink: string | undefined;
+  let localTexto: string | undefined;
+
+  $('a').each((_i, el) => {
+    const href = ($(el).attr('href') || '').trim();
+    const text = $(el).text().trim();
+    if (
+      !localLink &&
+      (href.includes('maps') || href.includes('goo.gl') || href.includes('share.google'))
+    ) {
+      localLink = href;
+      if (text && text.length > 2 && !text.startsWith('http')) {
+        localTexto = text;
+      }
+    }
+  });
+
+  // Preserva quebras de linha de blocos e <br> antes de extrair texto puro
+  $('br').replaceWith('\n');
+  $('p, div, li, tr, h1, h2, h3, h4, h5, h6').each((_i, el) => {
+    $(el).append('\n');
+  });
+
+  let text = $.text()
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n+/g, '\n\n')
+    .trim();
+
+  // Tenta identificar horário explícito no texto caso o campo `time` venha vazio
+  let horarioTexto: string | undefined;
+  const horaMatch = text.match(
+    /(?:Abertura(?:\s+dos\s+port[õo]es)?|Hor[áa]rio|In[íi]cio)[^\n\d]{0,25}(\d{1,2})[:hH](\d{2})/i
+  );
+  if (horaMatch) {
+    horarioTexto = `${horaMatch[1].padStart(2, '0')}:${horaMatch[2]}`;
+  }
+
+  // Remove blocos jurídicos/institucionais padronizados da plataforma Q2 no final
+  const boilerplateMarkers = [
+    /\n[_\-\s]*\n?\s*Transfer[êe]ncia de ingresso\b/i,
+    /\n[_\-\s]*\n?\s*Objetos proibidos\b/i,
+    /\n?\s*A Q2 Ingressos n[ãa]o faz parte da organiza[çc][ãa]o do evento/i,
+    /\n[_\-\s]*\n?\s*Suporte e d[úu]vidas\b/i,
+  ];
+  for (const marker of boilerplateMarkers) {
+    const idx = text.search(marker);
+    if (idx > 60) {
+      text = text.substring(0, idx).trim();
+    }
+  }
+
+  // Remove linhas compostas apenas por underscores/traços separadores excessivos
+  text = text
+    .replace(/_{4,}/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  return { descricaoLimpa: text, localLink, localTexto, horarioTexto };
+}
+
+/**
+ * Calcula o menor preço disponível a partir das seções/lotes retornados pela API.
+ */
+function extractMinPriceFromSections(
+  sections?: Q2SectionItem[],
+  allowFreeTickets?: boolean
+): string | undefined {
+  if (!Array.isArray(sections) || sections.length === 0) return undefined;
+
+  const availablePositivePrices: number[] = [];
+  const allPositivePrices: number[] = [];
+  let hasZeroTicket = false;
+
+  for (const sec of sections) {
+    for (const t of sec.tickets || []) {
+      const val = typeof t.value === 'number' ? t.value : Number(t.value);
+      if (isNaN(val)) continue;
+      if (val === 0) {
+        hasZeroTicket = true;
+      } else if (val > 0) {
+        allPositivePrices.push(val);
+        if (t.available === undefined || t.available === null || Number(t.available) > 0) {
+          availablePositivePrices.push(val);
+        }
+      }
+    }
+  }
+
+  const pool = availablePositivePrices.length > 0 ? availablePositivePrices : allPositivePrices;
+  if (pool.length > 0) {
+    const min = Math.min(...pool);
+    return `a partir de R$ ${min.toFixed(2)}`;
+  }
+
+  if (allowFreeTickets && hasZeroTicket) {
+    return 'Gratuito';
+  }
+
+  return undefined;
+}
+
+/**
+ * Caso o token público do endpoint `getEventTicketsBySlug` seja rotacionado no futuro,
+ * abre o Puppeteer uma única vez para interceptar o token atualizado enviado pelo site.
+ */
+async function refreshCompatTokenViaPuppeteer(sampleSlug: string): Promise<string | null> {
+  try {
+    const puppeteer = await import('puppeteer');
+    const browser = await puppeteer.default.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    });
+    try {
+      const page = await browser.newPage();
+      await page.setUserAgent(USER_AGENT);
+      let capturedToken: string | null = null;
+
+      page.on('request', (req) => {
+        if (req.method() === 'POST' && req.url().includes('getEventTicketsBySlug')) {
+          try {
+            const parsed = JSON.parse(req.postData() || '{}');
+            if (parsed.token) capturedToken = parsed.token;
+          } catch {}
+        }
+      });
+
+      await page.goto(`${BASE_URL}/events/${sampleSlug}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 20000,
+      });
+
+      for (let i = 0; i < 12 && !capturedToken; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      return capturedToken;
+    } finally {
+      await browser.close();
+    }
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCompatDetailBySlug(
+  slug: string,
+  token: string
+): Promise<{ status: number; data: Q2CompatDetailResponse | null }> {
+  const res = await fetch(`${CACHE_API_URL}/compat/getEventTicketsBySlug`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json, text/plain, */*',
+      'Origin': BASE_URL,
+      'Referer': `${BASE_URL}/`,
+      'User-Agent': USER_AGENT,
+    },
+    body: JSON.stringify({ eventSlug: slug, token }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!res.ok) {
+    return { status: res.status, data: null };
+  }
+
+  const data = (await res.json()) as Q2CompatDetailResponse;
+  return { status: res.status, data };
+}
+
+/**
+ * Extrai eventos diretamente da API de cache pública da Q2 (`cache-control-api.q2ingressos.com.br`).
+ */
+export async function getQ2EventsByApi(cidade: string = 'Franca'): Promise<Q2EventRaw[]> {
+  const cidadeNorm = normalizeText(cidade);
+  console.log(`\n🌐 [Q2 API] Consultando eventos em ${CACHE_API_URL}/home ...`);
+
+  const homeRes = await fetch(`${CACHE_API_URL}/home`, {
+    headers: {
+      'Accept': 'application/json',
+      'User-Agent': USER_AGENT,
+    },
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!homeRes.ok) {
+    throw new Error(`Falha ao consultar ${CACHE_API_URL}/home: HTTP ${homeRes.status}`);
+  }
+
+  const homeItems = (await homeRes.json()) as Q2HomeApiItem[];
+  if (!Array.isArray(homeItems)) {
+    throw new Error('Formato inesperado retornado por /api/v1/home');
+  }
+
+  const matchedItems: Q2HomeApiItem[] = [];
+
+  for (const item of homeItems) {
+    if (!item?.Slug || !item?.Name) continue;
+    const itemCityNorm = normalizeText(item.City || '');
+    const isTargetCity = itemCityNorm === cidadeNorm;
+
+    // Expande eventos-mestre (multi-sessão) quando pertencerem à cidade alvo e não forem de teste
+    if (item.IsMasterEvent) {
+      if (isTargetCity && !item.Name.toLowerCase().includes('teste') && !item.Slug.toLowerCase().includes('teste')) {
+        try {
+          const masterRes = await fetch(`${CACHE_API_URL}/eventos-mestre/${item.Slug}`, {
+            headers: { 'Accept': 'application/json', 'User-Agent': USER_AGENT },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (masterRes.ok) {
+            const subEvents = (await masterRes.json()) as Q2HomeApiItem[];
+            if (Array.isArray(subEvents)) {
+              for (const sub of subEvents) {
+                if (sub?.Slug && normalizeText(sub.City || '') === cidadeNorm) {
+                  matchedItems.push(sub);
+                }
+              }
+            }
+          }
+        } catch {
+          matchedItems.push(item);
+        }
+      } else if (isTargetCity) {
+        matchedItems.push(item);
+      }
+      continue;
+    }
+
+    if (isTargetCity) {
+      matchedItems.push(item);
+    }
+  }
+
+  // Deduplica por Slug
+  const uniqueItems = Array.from(new Map(matchedItems.map((i) => [i.Slug, i])).values());
+  console.log(`📋 [Q2 API] ${uniqueItems.length} evento(s) localizado(s) para ${cidade}`);
+
+  let compatToken = DEFAULT_COMPAT_TOKEN;
+  let tokenRefreshed = false;
+  const eventos: Q2EventRaw[] = [];
+
+  for (let i = 0; i < uniqueItems.length; i++) {
+    const item = uniqueItems[i];
+    const eventUrl = `${BASE_URL}/events/${item.Slug}`;
+    const isTestEvent =
+      item.Name.toLowerCase().includes('teste') || item.Slug.toLowerCase().includes('teste');
+
+    // Para eventos de teste, não gasta chamada de detalhe (o sync filtrará logo em seguida)
+    if (isTestEvent) {
+      eventos.push({
+        titulo: item.Name.trim(),
+        data: item.StartDate,
+        local_nome: `${item.City || cidade}/${item.State || 'SP'}`,
+        link: eventUrl,
+        imagemUrl: buildQ2CdnImageUrl(item.ImageEvent || item.ImageHomeEvent) || undefined,
+        descricao: item.Name.trim(),
+      });
+      continue;
+    }
+
+    console.log(`   📄 [${i + 1}/${uniqueItems.length}] ${item.Slug}`);
+
+    let detail: Q2CompatDetailResponse | null = null;
+    try {
+      let resp = await fetchCompatDetailBySlug(item.Slug, compatToken);
+      if ((resp.status === 400 || resp.status === 401 || resp.status === 403) && !tokenRefreshed) {
+        tokenRefreshed = true;
+        console.log('   🔄 [Q2 API] Atualizando token público via navegador headless...');
+        const newToken = await refreshCompatTokenViaPuppeteer(item.Slug);
+        if (newToken) {
+          compatToken = newToken;
+          resp = await fetchCompatDetailBySlug(item.Slug, compatToken);
+        }
+      }
+      detail = resp.data;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`   ⚠️  [Q2 API] Aviso ao buscar detalhes de ${item.Slug}: ${msg}`);
+    }
+
+    // Ignora sessões-filhas cujo evento mestre seja de teste
+    if (detail?.isSessionEventChild && detail.sessionEventMasterSlug?.toLowerCase().includes('teste')) {
+      continue;
+    }
+
+    const webInfo = parseWebsiteInformations(detail?.websiteInformations || item.Description);
+
+    // Combina data ("YYYY-MM-DD") + horário ("HH:mm")
+    const baseDatePart = (detail?.date || item.StartDate || '').split('T')[0];
+    let timePart = '00:00';
+    const rawTime = (detail?.time || webInfo.horarioTexto || '').trim();
+    const timeMatch = rawTime.match(/(\d{1,2})[:hH](\d{2})/);
+    if (timeMatch) {
+      timePart = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+    } else if (item.StartDate && item.StartDate.includes('T') && !item.StartDate.endsWith('T00:00:00')) {
+      timePart = item.StartDate.split('T')[1].substring(0, 5);
+    }
+    const isoDateTime = baseDatePart ? `${baseDatePart}T${timePart}:00` : item.StartDate;
+
+    // Monta local no padrão "NomeLocal - Cidade, UF"
+    let placeName = (detail?.location || item.Place || '').trim();
+    if ((!placeName || placeName === '.') && webInfo.localTexto) {
+      placeName = webInfo.localTexto.split(' - ')[0].trim();
+    }
+    const evCity = (detail?.city || item.City || cidade).trim();
+    const evState = (detail?.state || item.State || 'SP').trim();
+    const local_nome =
+      placeName && placeName !== '.' && normalizeText(placeName) !== normalizeText(evCity)
+        ? `${placeName} - ${evCity}, ${evState}`
+        : `${evCity}/${evState}`;
+
+    const preco = extractMinPriceFromSections(detail?.sections, detail?.allowFreeTickets);
+    const imagemUrl =
+      buildQ2CdnImageUrl(
+        detail?.eventImage || item.ImageEvent || detail?.imageHomeEvent || item.ImageHomeEvent
+      ) || undefined;
+
+    eventos.push({
+      titulo: (detail?.name || item.Name).trim(),
+      data: isoDateTime,
+      local_nome,
+      local_link: webInfo.localLink,
+      link: eventUrl,
+      imagemUrl,
+      preco,
+      descricao: webInfo.descricaoLimpa || (detail?.name || item.Name).trim(),
+    });
+  }
+
+  console.log(`✅ [Q2 API] ${eventos.length} evento(s) extraídos com sucesso`);
+  return eventos;
+}
+
+// ─── Tentativa de extração via Cheerio / API (página individual) ────
 
 /**
  * Tenta extrair dados adicionais de uma página individual de evento.
- * Funciona parcialmente — o HTML pode conter dados no __NEXT_DATA__ ou script inline.
+ * Usa a API pública de detalhes por slug com fallback para HTML estático.
  */
 export async function parseEventDetailPage(eventUrl: string): Promise<Partial<Q2EventRaw>> {
   try {
+    const slugMatch = eventUrl.match(/\/events\/([^/?#]+)/);
+    if (slugMatch) {
+      const { data } = await fetchCompatDetailBySlug(slugMatch[1], DEFAULT_COMPAT_TOKEN);
+      if (data) {
+        const webInfo = parseWebsiteInformations(data.websiteInformations);
+        return {
+          titulo: data.name,
+          descricao: webInfo.descricaoLimpa || data.name,
+          preco: extractMinPriceFromSections(data.sections, data.allowFreeTickets),
+          imagemUrl: buildQ2CdnImageUrl(data.eventImage || data.imageHomeEvent) || undefined,
+          local_link: webInfo.localLink,
+        };
+      }
+    }
+
     const html = await fetchWithRetry(eventUrl);
     const $ = cheerio.load(html);
 
-    // Tenta extrair dados do __NEXT_DATA__
+    // Tenta extrair dados do __NEXT_DATA__ (legado)
     const nextDataScript = $('script#__NEXT_DATA__').html();
     if (nextDataScript) {
       const data = JSON.parse(nextDataScript);
-      // Navegar na estrutura do Next.js para encontrar dados do evento
       const pageProps = data?.props?.pageProps;
       if (pageProps?.event) {
         const ev = pageProps.event;
@@ -468,64 +961,15 @@ export async function parseEventDetailPage(eventUrl: string): Promise<Partial<Q2
 /**
  * Busca eventos da Q2 Ingressos para a cidade especificada.
  *
- * ⚠️ IMPORTANTE: A Q2 usa Client-Side Rendering (CSR).
- * O HTML estático retornado pelo fetch() NÃO contém os cards de eventos.
- * Esta função tenta extrair dados via Cheerio, mas o resultado será vazio
- * na maioria dos casos. Para extração real, use Puppeteer (veja fallback abaixo).
- *
  * @param cidade - Nome da cidade para buscar (default: "Franca")
  * @returns Array de eventos brutos encontrados
  */
 export async function getQ2Events(cidade: string = 'Franca'): Promise<Q2EventRaw[]> {
-  const url = `${SEARCH_URL}?s=${encodeURIComponent(cidade)}`;
-  console.log(`\n🔍 [Q2 Service] Buscando eventos: ${url}`);
-
   try {
-    const html = await fetchWithRetry(url);
-    const $ = cheerio.load(html);
-    const eventos: Q2EventRaw[] = [];
-
-    // Verifica se o HTML contém conteúdo renderizado
-    const hasContent = $('a[href*="/events/"]').length > 0;
-
-    if (!hasContent) {
-      console.warn('⚠️  [Q2 Service] HTML estático sem conteúdo de eventos (CSR detectado).');
-      console.warn('   → A Q2 usa Client-Side Rendering. Cheerio não consegue extrair dados.');
-      console.warn('   → Use Puppeteer como fallback para extração real.');
-      return [];
-    }
-
-    // Se por algum motivo o HTML vier renderizado (SSR parcial)
-    $('a[href*="/events/"]').each((_i, el) => {
-      const $card = $(el);
-      const link = $card.attr('href') || '';
-      const titulo = $card.find('h3, abbr').first().text().trim();
-      const data = $card.find('[class*="date"], [class*="data"]').text().trim();
-      const local_nome = $card.find('[class*="local"], [class*="city"]').text().trim();
-      const imgEl = $card.find('img');
-      const imagemUrl = imgEl.attr('src') || imgEl.attr('data-src') || '';
-
-      if (titulo) {
-        eventos.push({
-          titulo,
-          data: data || 'Data não disponível',
-          local_nome: local_nome || `${cidade}/SP`,
-          link: link.startsWith('http') ? link : `${BASE_URL}${link}`,
-          imagemUrl,
-        });
-      }
-    });
-
-    // Deduplicação por link
-    const eventosUnicos = Array.from(
-      new Map(eventos.map((e) => [e.link, e])).values()
-    );
-
-    console.log(`✅ [Q2 Service] ${eventosUnicos.length} evento(s) extraídos via Cheerio`);
-    return eventosUnicos;
+    return await getQ2EventsByApi(cidade);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`❌ [Q2 Service] Erro ao buscar eventos: ${msg}`);
+    console.error(`❌ [Q2 Service] Erro ao buscar eventos via API: ${msg}`);
     return [];
   }
 }
@@ -623,21 +1067,25 @@ export function getQ2EventsPreExtracted(): Q2EventRaw[] {
   ];
 }
 
-// ─── Extração via Puppeteer (real) ──────────────────────────────────
+// ─── Extração Principal (API + Fallback Puppeteer na nova UI) ───────
 
 /**
- * Extrai eventos da Q2 Ingressos via Puppeteer (headless browser).
- * Supera o CSR renderizando o JavaScript do site.
- *
- * Fluxo:
- * 1. Abre browser headless
- * 2. Navega para a página de resultados
- * 3. Extrai links dos cards de eventos
- * 4. Visita cada página de detalhe para extrair dados completos
- * 5. Retorna array de Q2EventRaw
+ * Extrai eventos da Q2 Ingressos priorizando a API pública de cache da Q2
+ * e recorrendo ao Puppeteer na nova página `/search?search=...` caso necessário.
  */
 export async function getQ2EventsPuppeteer(cidade: string = 'Franca'): Promise<Q2EventRaw[]> {
-  // Import dinâmico para não quebrar se puppeteer não estiver instalado
+  // 1. Tenta extração direta pela API pública da Q2 (rápida e sem overhead de browser)
+  try {
+    const apiEvents = await getQ2EventsByApi(cidade);
+    if (apiEvents.length > 0) {
+      return apiEvents;
+    }
+  } catch (apiErr) {
+    const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+    console.warn(`⚠️  [Q2 API] Falhou (${msg}). Iniciando fallback com Puppeteer...`);
+  }
+
+  // 2. Fallback via Puppeteer compatível com a nova interface Expo / React Native Web da Q2
   const puppeteer = await import('puppeteer');
 
   console.log(`\n🚀 [Q2 Puppeteer] Iniciando browser headless...`);
@@ -651,175 +1099,168 @@ export async function getQ2EventsPuppeteer(cidade: string = 'Franca'): Promise<Q
     await page.setUserAgent(USER_AGENT);
     await page.setViewport({ width: 1280, height: 800 });
 
-    // 1. Navega para resultados de busca
-    const searchUrl = `${BASE_URL}/resultados?s=${encodeURIComponent(cidade)}`;
+    const searchUrl = `${SEARCH_URL}?search=${encodeURIComponent(cidade)}`;
     console.log(`🔍 [Q2 Puppeteer] Navegando: ${searchUrl}`);
-    await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-    // 2. Espera os cards de eventos renderizarem
+    // Aguarda cards do novo layout (`data-testid="card_home_search_result_*"`) ou links legados
+    const cardSelector = '[data-testid^="card_home_search_result_"], a[href*="/events/"]';
     try {
-      await page.waitForSelector('a[href*="/events/"]', { timeout: 15000 });
+      await page.waitForSelector(cardSelector, { timeout: 15000 });
     } catch {
       console.warn('⚠️  [Q2 Puppeteer] Nenhum card de evento encontrado após 15s.');
-      await browser.close();
       return [];
     }
 
-    // 3. Extrai links dos eventos da listagem
-    const eventLinks: string[] = await page.evaluate(() => {
-      const links = document.querySelectorAll('a[href*="/events/"]');
-      const hrefs = new Set<string>();
-      links.forEach((el) => {
-        const href = (el as HTMLAnchorElement).href;
-        if (href && !hrefs.has(href)) hrefs.add(href);
+    const eventLinks: string[] = await page.evaluate((baseUrl) => {
+      const urls = new Set<string>();
+
+      document.querySelectorAll('[data-testid^="card_home_search_result_"]').forEach((el) => {
+        const testId = el.getAttribute('data-testid') || '';
+        const slug = testId.replace(/^card_home_search_result_/, '').trim();
+        if (slug) urls.add(`${baseUrl}/events/${slug}`);
       });
-      return Array.from(hrefs);
-    });
+
+      document.querySelectorAll('a[href*="/events/"]').forEach((el) => {
+        const href = (el as HTMLAnchorElement).href;
+        if (href) urls.add(href);
+      });
+
+      return Array.from(urls);
+    }, BASE_URL);
 
     console.log(`📋 [Q2 Puppeteer] ${eventLinks.length} evento(s) encontrados na listagem`);
 
     if (eventLinks.length === 0) {
-      await browser.close();
       return [];
     }
 
-    // 4. Visita cada página de detalhe
     const eventos: Q2EventRaw[] = [];
 
     for (let i = 0; i < eventLinks.length; i++) {
       const eventUrl = eventLinks[i];
-      console.log(`   📄 [${i + 1}/${eventLinks.length}] ${eventUrl.split('/events/')[1] || eventUrl}`);
+      const slug = eventUrl.split('/events/')[1] || eventUrl;
+      console.log(`   📄 [${i + 1}/${eventLinks.length}] ${slug}`);
 
+      let capturedDetail: Q2CompatDetailResponse | null = null;
+      const responseHandler = async (resp: any) => {
+        if (resp.request().method() === 'POST' && resp.url().includes('getEventTicketsBySlug')) {
+          try {
+            capturedDetail = await resp.json();
+          } catch {}
+        }
+      };
+
+      page.on('response', responseHandler);
       try {
-        await page.goto(eventUrl, { waitUntil: 'networkidle2', timeout: 20000 });
-        await new Promise((r) => setTimeout(r, 2000)); // Espera renderização
+        await page.goto(eventUrl, { waitUntil: 'domcontentloaded', timeout: 25000 });
+        for (let w = 0; w < 10 && !capturedDetail; w++) {
+          await new Promise((r) => setTimeout(r, 400));
+        }
 
-        const eventData = await page.evaluate(() => {
-          // Título — geralmente o h1 ou elemento principal
+        if (capturedDetail) {
+          const d = capturedDetail as Q2CompatDetailResponse;
+          if (d.isSessionEventChild && d.sessionEventMasterSlug?.toLowerCase().includes('teste')) {
+            continue;
+          }
+          const webInfo = parseWebsiteInformations(d.websiteInformations);
+          const baseDatePart = (d.date || '').split('T')[0];
+          const rawTime = (d.time || webInfo.horarioTexto || '00:00').trim();
+          const tMatch = rawTime.match(/(\d{1,2})[:hH](\d{2})/);
+          const hhmm = tMatch ? `${tMatch[1].padStart(2, '0')}:${tMatch[2]}` : '00:00';
+          const evCity = (d.city || cidade).trim();
+          const evState = (d.state || 'SP').trim();
+          const place = (d.location || '').trim();
+
+          eventos.push({
+            titulo: (d.name || '').trim(),
+            data: baseDatePart ? `${baseDatePart}T${hhmm}:00` : '',
+            local_nome:
+              place && place !== '.' && normalizeText(place) !== normalizeText(evCity)
+                ? `${place} - ${evCity}, ${evState}`
+                : `${evCity}/${evState}`,
+            local_link: webInfo.localLink,
+            link: eventUrl,
+            imagemUrl: buildQ2CdnImageUrl(d.eventImage || d.imageHomeEvent) || undefined,
+            preco: extractMinPriceFromSections(d.sections, d.allowFreeTickets),
+            descricao: webInfo.descricaoLimpa || (d.name || '').trim(),
+          });
+          continue;
+        }
+
+        // Fallback via DOM do novo layout caso a resposta JSON não tenha sido capturada
+        await new Promise((r) => setTimeout(r, 1500));
+        const eventData = await page.evaluate((targetCity) => {
+          const lines = document.body.innerText
+            .split('\n')
+            .map((l) => l.trim())
+            .filter(Boolean);
+
           const titulo =
             document.querySelector('h1')?.textContent?.trim() ||
-            document.querySelector('h2')?.textContent?.trim() ||
+            lines[0] ||
             '';
 
-          // Data — busca perto do ícone de calendário ou texto com padrão de data
-          let data = '';
           const allText = document.body.innerText;
-          // Padrão: "Dia da semana, DD de Mês" ou similar
+          let data = '';
           const dataMatch = allText.match(
-            /(Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo)(?:-[Ff]eira)?[-,\s]+\d{1,2}\s+de\s+\w+[\s\S]*?(?:ABERTURA|abertura|Início|início)?\s*\d{1,2}[:hH]\d{2}/i
+            /(?:SEG|TER|QUA|QUI|SEX|SÁB|DOM|Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo)(?:-[Ff]eira)?[\s,.-]+(\d{1,2})\s+(?:de\s+)?([A-Za-zçÇ]+)[\s\S]{0,40}?(?:Abertura|Início)?\s*(\d{1,2}[:hH]\d{2})?/i
           );
           if (dataMatch) {
-            data = dataMatch[0].trim();
-          } else {
-            // Fallback: busca qualquer texto com formato de data
-            const dataFallback = allText.match(
-              /(?:SEG|TER|QUA|QUI|SEX|SÁB|DOM|Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo)(?:-[Ff]eira)?[.,\s-]+\d{1,2}\s+de\s+\w+/i
-            );
-            if (dataFallback) data = dataFallback[0].trim();
+            data = `${dataMatch[1]} de ${dataMatch[2]}${dataMatch[3] ? ' ' + dataMatch[3] : ''}`;
           }
 
-          // Local — busca link com "Local:" label ou link do Google Maps próximo
-          let local_nome = '';
-          let local_link = '';
-
-          // Procura links do Google Maps
-          const mapsLinks = document.querySelectorAll('a[href*="maps"], a[href*="goo.gl"]');
-          mapsLinks.forEach((el) => {
-            const anchor = el as HTMLAnchorElement;
-            if (anchor.href.includes('maps') || anchor.href.includes('goo.gl')) {
-              local_link = anchor.href;
-              // O texto do link geralmente é o nome do local
-              const linkText = anchor.textContent?.trim();
-              if (linkText && linkText.length > 3) {
-                local_nome = linkText;
-              }
-            }
-          });
-
-          // Se não achou nome do local no link, procura na label "Local:"
-          if (!local_nome) {
-            const localLabel = Array.from(document.querySelectorAll('span, p, div')).find(
-              (el) => el.textContent?.trim().startsWith('Local:')
-            );
-            if (localLabel) {
-              local_nome = localLabel.textContent?.replace('Local:', '').trim() || '';
-            }
-          }
-
-          // Preço — busca "a partir de R$" ou "R$"
+          // Extrai preço apenas após "SELECIONE O INGRESSO" para ignorar "Ingresso verde + R$ 2,00"
           let preco = '';
-          const precoMatch = allText.match(/(?:a partir de\s*)?R\$\s*[\d.,]+/i);
-          if (precoMatch) preco = precoMatch[0].trim();
+          const ticketSectionIdx = allText.indexOf('SELECIONE O INGRESSO');
+          const priceSource = ticketSectionIdx !== -1 ? allText.substring(ticketSectionIdx) : allText;
+          const precoMatch = priceSource.match(/R\$\s*[\d.,]+/i);
+          if (precoMatch) preco = `a partir de ${precoMatch[0].trim()}`;
 
-          // Descrição — busca o primeiro bloco de texto substancial
-          let descricao = '';
-          const paragraphs = document.querySelectorAll('p, div[class*="description"], div[class*="descri"]');
-          paragraphs.forEach((p) => {
-            const text = p.textContent?.trim() || '';
-            if (text.length > 30 && text.length > descricao.length && !text.includes('R$')) {
-              descricao = text;
-            }
-          });
-          if (!descricao) descricao = titulo;
-
-          // Imagem
-          let imagemUrl = '';
-          const images = Array.from(document.querySelectorAll('img'));
-          
-          const banner = images.find(img => {
-            const src = (img.src || '').toLowerCase();
-            const alt = (img.alt || '').toLowerCase();
-            
-            // Ignora imagens de logo ou ícones
-            if (src.includes('logo') || alt.includes('logo')) return false;
-            if (src.includes('icon') || src.includes('avatar')) return false;
-            
-            // Ignora imagens dentro de cabecalho ou navegacao
-            const isInsideHeader = !!img.closest('header, nav, [class*="header"], [class*="nav"]');
-            if (isInsideHeader) return false;
-
-            // Se as dimensões estiverem disponíveis e a imagem for um ícone pequeno
-            if (img.width > 0 && img.width < 150) return false;
-
-            // Se for carregada da CDN e não for logo, grande chance de ser o banner
-            if (src.includes('cdn')) return true;
-
-            // Fallback genérico
-            return true;
-          });
-
-          if (banner) {
-            imagemUrl = banner.src;
+          const cityLineIdx = lines.findIndex((l) => /,?\s*[A-Z]{2}$/.test(l) && l.length < 40);
+          let local_nome = `${targetCity}/SP`;
+          if (cityLineIdx > 0) {
+            local_nome = `${lines[cityLineIdx - 1]} - ${lines[cityLineIdx]}`;
           }
-          
-          return { titulo, data, local_nome, local_link, preco, descricao, imagemUrl };
-        });
+
+          let imagemUrl = '';
+          const banner = Array.from(document.querySelectorAll('img')).find((img) => {
+            const src = (img.src || '').toLowerCase();
+            if (!src || src.includes('logo') || src.includes('icon') || src.includes('avatar')) return false;
+            if (img.width > 0 && img.width < 150) return false;
+            return src.includes('cdn.q2ingressos.com.br') || src.includes('/events/');
+          });
+          if (banner) imagemUrl = banner.src;
+
+          return { titulo, data, local_nome, preco, imagemUrl };
+        }, cidade);
 
         if (eventData.titulo) {
           eventos.push({
             titulo: eventData.titulo,
             data: eventData.data || 'Data não disponível',
-            local_nome: eventData.local_nome || `${cidade}/SP`,
-            local_link: eventData.local_link || undefined,
+            local_nome: eventData.local_nome,
             link: eventUrl,
-            imagemUrl: eventData.imagemUrl || undefined,
+            imagemUrl: buildQ2CdnImageUrl(eventData.imagemUrl) || undefined,
             preco: eventData.preco || undefined,
-            descricao: eventData.descricao || undefined,
+            descricao: eventData.titulo,
           });
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn(`   ⚠️  Erro ao extrair ${eventUrl}: ${msg}`);
+      } finally {
+        page.off('response', responseHandler);
       }
     }
 
     console.log(`\n✅ [Q2 Puppeteer] ${eventos.length} evento(s) extraídos com sucesso`);
-    await browser.close();
     return eventos;
   } catch (err) {
-    await browser.close();
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`❌ [Q2 Puppeteer] Erro fatal: ${msg}`);
-    return [];
+    throw err;
+  } finally {
+    await browser.close();
   }
 }

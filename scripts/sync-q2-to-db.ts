@@ -8,9 +8,7 @@ config();
 import { PrismaClient, CategoriaEvento, EventStatus } from '@prisma/client';
 import { 
   getQ2EventsPuppeteer, 
-  getQ2EventsPreExtracted, 
-  normalizeQ2Event,
-  Q2EventNormalized
+  normalizeQ2Event
 } from '../app/services/q2Service';
 import fs from 'fs';
 import path from 'path';
@@ -22,7 +20,10 @@ async function downloadImage(url: string | null): Promise<string | null> {
   if (url.startsWith('/')) return url;
   
   try {
-    const res = await fetch(url, { redirect: 'follow' });
+    const res = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(15000),
+    });
     if (!res.ok) return null;
     
     const arrayBuffer = await res.arrayBuffer();
@@ -63,9 +64,15 @@ async function downloadImage(url: string | null): Promise<string | null> {
   }
 }
 
+let geminiQuotaExceeded = false;
+let groqQuotaExceeded = false;
+
 async function resumirComIA(descricao: string, titulo: string): Promise<string> {
   // Ignora descrições curtas
   if (!descricao || descricao.length < 80) return descricao;
+
+  // Limita tamanho máximo enviado ao prompt para economizar tokens
+  const descricaoRecortada = descricao.substring(0, 3500);
 
   const prompt = `Você é um curador de um guia cultural de eventos de Franca-SP. 
 Sua tarefa é ler a descrição original do evento '${titulo}' e remover todos os textos legais, termos de uso, regras de meia-entrada e restrições burocráticas.
@@ -75,13 +82,13 @@ REGRA CRÍTICA: Retorne APENAS o texto da descrição do evento. NÃO adicione i
 
 Descrição Original:
 """
-${descricao}
+${descricaoRecortada}
 """
 
 Resumo:`;
 
   // Tenta Gemini com retry em caso de Rate Limit (429)
-  if (process.env.GEMINI_API_KEY) {
+  if (process.env.GEMINI_API_KEY && !geminiQuotaExceeded) {
     const maxRetries = 3;
     let delay = 2000;
 
@@ -90,7 +97,8 @@ Resumo:`;
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          signal: AbortSignal.timeout(15000),
         });
 
         if (res.ok) {
@@ -100,6 +108,17 @@ Resumo:`;
           break;
         } else if (res.status === 429) {
           const errorData = await res.json().catch(() => ({}));
+          const errorMsg = errorData.error?.message || '';
+          if (
+            errorMsg.toLowerCase().includes('quota') ||
+            errorMsg.toLowerCase().includes('exceeded') ||
+            errorMsg.toLowerCase().includes('limit')
+          ) {
+            console.warn(`   ⚠️ Gemini Quota Excedida! Desabilitando chamadas subsequentes nesta execução.`);
+            geminiQuotaExceeded = true;
+            break;
+          }
+
           const retryDelaySecs = errorData.error?.details?.find((d: any) => d['@type']?.includes('RetryInfo'))?.retryDelay;
           let waitTime = delay;
           if (retryDelaySecs) {
@@ -126,7 +145,7 @@ Resumo:`;
   }
 
   // Tenta Groq (fallback gratuito)
-  if (process.env.GROQ_API_KEY) {
+  if (process.env.GROQ_API_KEY && !groqQuotaExceeded) {
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -139,12 +158,24 @@ Resumo:`;
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 300,
           temperature: 0.7
-        })
+        }),
+        signal: AbortSignal.timeout(15000),
       });
       if (res.ok) {
         const data = await res.json();
         const textoGerado = data.choices?.[0]?.message?.content;
         if (textoGerado) return textoGerado.trim();
+      } else if (res.status === 429 || res.status === 402) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMsg = errorData.error?.message || '';
+        if (
+          errorMsg.toLowerCase().includes('quota') ||
+          errorMsg.toLowerCase().includes('exceeded') ||
+          errorMsg.toLowerCase().includes('billing')
+        ) {
+          console.warn(`   ⚠️ Groq Quota/Billing Excedido! Desabilitando chamadas subsequentes à Groq nesta execução.`);
+          groqQuotaExceeded = true;
+        }
       }
     } catch (e) {
       console.warn("   ⚠️ Erro ao acessar IA da Groq.");
@@ -164,6 +195,8 @@ async function main() {
   console.log('🔑 Gemini API Key:', process.env.GEMINI_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
   console.log('🔑 Groq API Key:', process.env.GROQ_API_KEY ? '✅ Carregada' : '❌ Não encontrada');
 
+  let hasFatalError = false;
+
   try {
     // 1. Garantir que o organizador "Q2 Ingressos" existe
     console.log('\n👤 Verificando organizador do sistema...');
@@ -182,15 +215,15 @@ async function main() {
     });
     console.log(`   ✅ Organizador ID: ${organizer.id}`);
 
-    // 2. Extrair eventos (Puppeteer com fallback)
+    // Desconecta o Prisma durante a extração para evitar timeout no pool de conexões do Supabase
+    await prisma.$disconnect();
+
+    // 2. Extrair eventos da Q2 (API + fallback Puppeteer)
     console.log('\n🚀 Extraindo eventos da Q2...');
-    let rawEvents = [];
-    try {
-      rawEvents = await getQ2EventsPuppeteer('Franca');
-    } catch (e) {
-      console.warn('⚠️  Erro no Puppeteer, usando dados pré-extraídos.');
-      rawEvents = getQ2EventsPreExtracted();
-    }
+    const rawEvents = await getQ2EventsPuppeteer('Franca');
+
+    // Reconecta o Prisma
+    await prisma.$connect();
 
     if (rawEvents.length === 0) {
       console.log('🛑 Nenhum evento encontrado para sincronizar.');
@@ -220,28 +253,64 @@ async function main() {
         continue;
       }
 
-      // 3.1. Baixar a imagem (se disponível)
-      const localImagePath = await downloadImage(normalized.imagem);
-      const finalImagePath = localImagePath || normalized.imagem || '';
-
-      // 3.2. Formatar descrição com IA
-      let descricaoFormatada = normalized.descricao;
-      if (process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY) {
-         descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
-      }
-
       // Verifica se o evento já existe (pelo link de compra ou título+data)
       const existingEvent = await prisma.evento.findFirst({
         where: {
           OR: [
             { link_compra: normalized.link_compra },
             { 
-              titulo: normalized.titulo,
+              titulo: {
+                equals: normalized.titulo,
+                mode: 'insensitive',
+              },
               data_horario: normalized.data_horario
             }
           ]
         }
       });
+
+      let finalImagePath = '';
+      let descricaoFormatada = '';
+      let chamouIA = false;
+
+      if (existingEvent) {
+        // Reaproveita imagem e descrição existentes para poupar downloads e cota de IA
+        finalImagePath = existingEvent.imagem;
+        descricaoFormatada = existingEvent.descricao;
+
+        const localFileExists =
+          finalImagePath.startsWith('/uploads/') &&
+          fs.existsSync(path.join(process.cwd(), 'public', finalImagePath));
+
+        const precisaBaixarImagem = !finalImagePath || !localFileExists;
+        const precisaIA =
+          !descricaoFormatada ||
+          descricaoFormatada.length < 50 ||
+          descricaoFormatada === normalized.titulo ||
+          descricaoFormatada.includes('A Q2 Ingressos não faz parte da organização');
+
+        if (precisaBaixarImagem) {
+          const localImagePath = await downloadImage(normalized.imagem);
+          finalImagePath = localImagePath || normalized.imagem || existingEvent.imagem || '';
+        }
+
+        if (precisaIA && (process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY)) {
+          console.log(`      🤖 [IA] Gerando descrição para evento atualizado: "${normalized.titulo}"`);
+          descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
+          chamouIA = true;
+        }
+      } else {
+        // Evento novo: baixa imagem e formata descrição com IA
+        const localImagePath = await downloadImage(normalized.imagem);
+        finalImagePath = localImagePath || normalized.imagem || '';
+
+        descricaoFormatada = normalized.descricao;
+        if (process.env.GEMINI_API_KEY || process.env.GROQ_API_KEY) {
+          console.log(`      🤖 [IA] Gerando descrição para novo evento: "${normalized.titulo}"`);
+          descricaoFormatada = await resumirComIA(normalized.descricao, normalized.titulo);
+          chamouIA = true;
+        }
+      }
 
       const eventData = {
         titulo: normalized.titulo,
@@ -257,7 +326,7 @@ async function main() {
         cep: normalized.cep,
         preco: normalized.preco,
         link_compra: normalized.link_compra,
-        imagem: finalImagePath, // Usa a imagem local, original ou gerada por IA
+        imagem: finalImagePath,
         status: 'Publicado' as EventStatus,
         organizerId: organizer.id,
       };
@@ -279,8 +348,12 @@ async function main() {
         console.log(`   ✨ Criado: "${normalized.titulo}"`);
       }
 
-      // Pequena pausa para evitar estourar limites das APIs externas (Gemini/imagens)
-      await new Promise((r) => setTimeout(r, 2000));
+      // Pausa apenas se chamou IA
+      if (chamouIA) {
+        await new Promise((r) => setTimeout(r, 2000));
+      } else {
+        await new Promise((r) => setTimeout(r, 100));
+      }
     }
 
     console.log('\n' + '━'.repeat(60));
@@ -291,9 +364,13 @@ async function main() {
     console.log('━'.repeat(60));
 
   } catch (error) {
+    hasFatalError = true;
     console.error('\n❌ ERRO FATAL NA SINCRONIZAÇÃO:', error);
   } finally {
     await prisma.$disconnect();
+    if (hasFatalError) {
+      process.exit(1);
+    }
   }
 }
 
