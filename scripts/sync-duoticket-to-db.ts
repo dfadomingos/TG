@@ -87,7 +87,8 @@ Resumo:`;
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          signal: AbortSignal.timeout(30000),
         });
 
         if (res.ok) {
@@ -142,7 +143,7 @@ Resumo:`;
           'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'groq/compound-mini',
+          model: 'qwen/qwen3.8-27b',
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 300,
           temperature: 0.7

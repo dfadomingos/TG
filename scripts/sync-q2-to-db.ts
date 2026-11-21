@@ -98,7 +98,7 @@ Resumo:`;
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-          signal: AbortSignal.timeout(15000),
+          signal: AbortSignal.timeout(30000),
         });
 
         if (res.ok) {
@@ -154,7 +154,7 @@ Resumo:`;
           'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'groq/compound-mini',
+          model: 'qwen/qwen3.8-27b',
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 300,
           temperature: 0.7
@@ -287,7 +287,9 @@ async function main() {
           !descricaoFormatada ||
           descricaoFormatada.length < 50 ||
           descricaoFormatada === normalized.titulo ||
-          descricaoFormatada.includes('A Q2 Ingressos não faz parte da organização');
+          descricaoFormatada.includes('A Q2 Ingressos não faz parte da organização') ||
+          descricaoFormatada.includes('Informações importantes') ||
+          descricaoFormatada.includes('Abertura dos portões');
 
         if (precisaBaixarImagem) {
           const localImagePath = await downloadImage(normalized.imagem);
