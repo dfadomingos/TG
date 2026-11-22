@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SearchBarProps {
   onSearch?: (termo: string) => void;
+  externalValue?: string;
 }
 
-export function SearchBar({ onSearch }: SearchBarProps) {
+export function SearchBar({ onSearch, externalValue }: SearchBarProps) {
   const [termo, setTermo] = useState("");
+
+  useEffect(() => {
+    if (externalValue !== undefined) {
+      setTermo(externalValue);
+    }
+  }, [externalValue]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

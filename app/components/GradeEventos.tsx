@@ -8,6 +8,7 @@ import { formatarData, formatarHora, formatarPreco } from "../utils/formatters";
 
 interface GradeEventosProps {
   termoBusca?: string;
+  onClearSearch?: () => void;
 }
 
 interface EventoAPI {
@@ -23,12 +24,17 @@ interface EventoAPI {
   preco: number;
 }
 
-export function GradeEventos({ termoBusca = '' }: GradeEventosProps) {
+export function GradeEventos({ termoBusca = '', onClearSearch }: GradeEventosProps) {
   const { user, isLoggedIn } = useAuth();
   const [eventos, setEventos] = useState<EventoAPI[]>([]);
   const [favoritosIds, setFavoritosIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [categoriaAtiva, setCategoriaAtiva] = useState("Todos");
+
+  const handleLimparFiltros = () => {
+    setCategoriaAtiva("Todos");
+    if (onClearSearch) onClearSearch();
+  };
 
   // Buscar eventos reais do banco
   useEffect(() => {
@@ -161,8 +167,19 @@ export function GradeEventos({ termoBusca = '' }: GradeEventosProps) {
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-          <p className="text-gray-500">Nenhum evento encontrado{categoriaAtiva !== "Todos" ? " nesta categoria" : ""}.</p>
+        <div className="text-center py-20 px-4 bg-white rounded-xl border border-dashed border-gray-300 flex flex-col items-center gap-3">
+          <p className="text-gray-600 font-medium">
+            Nenhum evento encontrado para os critérios selecionados.
+          </p>
+          {(categoriaAtiva !== "Todos" || termoBusca.trim() !== "") && (
+            <button
+              type="button"
+              onClick={handleLimparFiltros}
+              className="mt-1 px-5 py-2 rounded-full bg-background-button text-text-button text-sm font-bold hover:opacity-90 transition-opacity cursor-pointer"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
       )}
     </section>

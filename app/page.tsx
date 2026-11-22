@@ -27,7 +27,7 @@ export default function Home() {
       <Header />
 
       {/* Hero Section with Search */}
-      <HomeHero onSearch={handleSearch} />
+      <HomeHero onSearch={handleSearch} searchValue={termoBusca} />
 
       {/* Destaques do Carrossel */}
       <section className="px-4 sm:px-8 pt-4 pb-0 md:pt-8 md:pb-0 bg-gray-50/50">
@@ -40,7 +40,7 @@ export default function Home() {
       {/* Filtro de Categorias + Grade de Eventos */}
       <section ref={eventosRef} className="px-4 sm:px-8 pt-4 pb-12 md:pt-6 md:pb-20 scroll-mt-4">                
         <div className="max-w-[1400px] mx-auto">
-          <GradeEventos termoBusca={termoBusca} />
+          <GradeEventos termoBusca={termoBusca} onClearSearch={() => setTermoBusca("")} />
         </div>
       </section>
 

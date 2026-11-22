@@ -4,9 +4,10 @@ import { SearchBar } from "./SearchBar";
 
 interface HomeHeroProps {
   onSearch?: (termo: string) => void;
+  searchValue?: string;
 }
 
-export function HomeHero({ onSearch }: HomeHeroProps) {
+export function HomeHero({ onSearch, searchValue }: HomeHeroProps) {
   return (
     <section className="bg-banner px-4 py-6 sm:py-10 md:py-12 flex items-center justify-center">
       <div className="max-w-[1200px] mx-auto text-center w-full px-4">
@@ -17,7 +18,7 @@ export function HomeHero({ onSearch }: HomeHeroProps) {
           Shows, festas, bares, teatros e workshops. Sua próxima experiência inesquecível começa aqui.
         </p>
         <div className="flex justify-center w-full max-w-2xl mx-auto">
-          <SearchBar onSearch={onSearch} />
+          <SearchBar onSearch={onSearch} externalValue={searchValue} />
         </div>
       </div>
     </section>
